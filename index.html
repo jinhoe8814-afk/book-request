@@ -573,18 +573,9 @@ function loading(show, msg = '처리 중...') {
 
 // ===================== API =====================
 async function api(params) {
-  // addBooks 등 대용량 데이터는 POST로 전송 (URL 길이 제한 우회)
-  if (params.data && params.data.length > 500) {
-    const url = API_URL + '?action=' + params.action;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(params)
-    });
-    return resp.json();
-  }
   const url = API_URL + '?' + new URLSearchParams(params).toString();
   const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return resp.json();
 }
 
@@ -1323,7 +1314,7 @@ async function uploadBookFile(input) {
       if (!books.length) { toast('업로드할 도서가 없습니다. 파일 형식(도서명, 지은이, 출판사)을 확인해주세요.', 'warning'); return; }
 
       let added = 0;
-      const BATCH = 50;
+      const BATCH = 10;
       for (let i = 0; i < books.length; i += BATCH) {
         loading(true, `업로드 중... ${Math.min(i + BATCH, books.length)} / ${books.length}권`);
         const res = await api({ action: 'addBooks', data: JSON.stringify(books.slice(i, i + BATCH)) });
