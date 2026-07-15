@@ -546,7 +546,8 @@ const CLASSES = ['1학년','2학년','3학년','4학년','5학년','6학년','�
 const CLASS_COLORS = ['class-1','class-2','class-3','class-4','class-5','class-6','class-7','class-8'];
 
 // ===================== STATE =====================
-let API_URL    = localStorage.getItem('appsScriptUrl') || '';
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbwq5qjJOUCnsk-lsRPUnMuuHxoPCUdcuhoIBlYXP2_VSjCbu2BwxZGsJ6qdI-mvxcP_Tw/exec';
+let API_URL    = localStorage.getItem('appsScriptUrl') || DEFAULT_API_URL;
 let KAKAO_KEY  = localStorage.getItem('kakaoApiKey')   || '';
 let adminLoggedIn = false;
 let yes24Pending = null;
@@ -1270,17 +1271,39 @@ function renderBudgetOverview() {
 // ===================== BOOK LIST =====================
 async function uploadBookFile(input) {
   const file = input.files[0]; if (!file) return;
+  const isCSV = file.name.toLowerCase().endsWith('.csv');
   const reader = new FileReader();
+
   reader.onload = async e => {
     try {
-      const wb   = XLSX.read(e.target.result, { type: 'array' });
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+      let wb;
+      if (isCSV) {
+        // CSV: 텍스트로 읽어서 파싱 (한글 인코딩 대응)
+        wb = XLSX.read(e.target.result, { type: 'string', codepage: 949 });
+      } else {
+        wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      }
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+      // 헤더 행 자동 탐지 (도서명 포함 행)
+      let startRow = 1;
+      for (let i = 0; i < Math.min(5, rows.length); i++) {
+        const row = rows[i].map(c => String(c).trim());
+        if (row.some(c => c.includes('도서명') || c.includes('제목') || c.toLowerCase().includes('title'))) {
+          startRow = i + 1; break;
+        }
+      }
+
       const books = [];
-      for (let i = 1; i < rows.length; i++) {
+      for (let i = startRow; i < rows.length; i++) {
         const [title='', author='', publisher=''] = rows[i];
         const t = String(title).trim();
         if (t) books.push({ id: Date.now() + i, title: t, author: String(author).trim(), publisher: String(publisher).trim() });
       }
+
+      if (!books.length) { toast('업로드할 도서가 없습니다. 파일 형식(도서명, 지은이, 출판사)을 확인해주세요.', 'warning'); return; }
+
       loading(true, `${books.length}권 업로드 중...`);
       try {
         let added = 0;
@@ -1291,9 +1314,11 @@ async function uploadBookFile(input) {
         await loadData();
         toast(`${added}권 추가 완료`, 'success');
       } finally { loading(false); }
-    } catch (err) { toast('파일 오류: ' + err.message, 'danger'); }
+    } catch (err) { toast('파일 오류: ' + err.message + ' — 엑셀(.xlsx) 또는 CSV 파일인지 확인해주세요.', 'danger'); }
   };
-  reader.readAsArrayBuffer(file);
+
+  if (isCSV) reader.readAsText(file, 'UTF-8');
+  else reader.readAsArrayBuffer(file);
   input.value = '';
 }
 
