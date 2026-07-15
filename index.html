@@ -155,7 +155,7 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- SETUP MODAL -->
-<div class="modal-overlay" id="setupModal">
+<div class="modal-overlay hidden" id="setupModal">
   <div class="modal-box" style="max-width:520px">
     <div class="text-center mb-3">
       <i class="bi bi-gear-fill text-primary" style="font-size:2rem"></i>
@@ -1281,7 +1281,7 @@ async function uploadBookFile(input) {
         // CSV: 텍스트로 읽어서 파싱 (한글 인코딩 대응)
         wb = XLSX.read(e.target.result, { type: 'string', codepage: 949 });
       } else {
-        wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        wb = XLSX.read(e.target.result, { type: 'array' });
       }
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
@@ -1304,17 +1304,17 @@ async function uploadBookFile(input) {
 
       if (!books.length) { toast('업로드할 도서가 없습니다. 파일 형식(도서명, 지은이, 출판사)을 확인해주세요.', 'warning'); return; }
 
-      loading(true, `${books.length}권 업로드 중...`);
-      try {
-        let added = 0;
-        for (let i = 0; i < books.length; i += 50) {
-          const res = await api({ action: 'addBooks', data: JSON.stringify(books.slice(i, i + 50)) });
-          added += res.added || 0;
-        }
-        await loadData();
-        toast(`${added}권 추가 완료`, 'success');
-      } finally { loading(false); }
-    } catch (err) { toast('파일 오류: ' + err.message + ' — 엑셀(.xlsx) 또는 CSV 파일인지 확인해주세요.', 'danger'); }
+      let added = 0;
+      const BATCH = 100;
+      for (let i = 0; i < books.length; i += BATCH) {
+        loading(true, `업로드 중... ${Math.min(i + BATCH, books.length)} / ${books.length}권`);
+        const res = await api({ action: 'addBooks', data: JSON.stringify(books.slice(i, i + BATCH)) });
+        added += res.added || 0;
+      }
+      await loadData();
+      loading(false);
+      toast(`${added}권 업로드 완료!`, 'success');
+    } catch (err) { loading(false); toast('파일 오류: ' + err.message, 'danger'); }
   };
 
   if (isCSV) reader.readAsText(file, 'UTF-8');
