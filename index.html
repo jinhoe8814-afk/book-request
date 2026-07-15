@@ -751,7 +751,11 @@ function checkDuplicate() {
   const low = title.toLowerCase().replace(/\s/g, '');
   const dups = appData.books.filter(b => {
     const bt = String(b['도서명'] || '').toLowerCase().replace(/\s/g, '');
-    return bt.includes(low) || low.includes(bt);
+    if (!bt || !low) return false;
+    if (bt === low) return true; // 완전 일치
+    // 짧은 쪽이 긴 쪽의 85% 이상 길이일 때만 포함 관계 체크 (단어 하나짜리 오탐 방지)
+    const ratio = Math.min(bt.length, low.length) / Math.max(bt.length, low.length);
+    return ratio >= 0.85 && (bt.includes(low) || low.includes(bt));
   });
   const div = document.getElementById('dupResult');
   div.style.display = 'block';
@@ -1035,10 +1039,10 @@ function clearFilters() {
   renderStatusTable();
 }
 function renderStatusTable() {
-  const cls = document.getElementById('filterClass').value;
+  const filterCls = document.getElementById('filterClass').value;
   const ti  = document.getElementById('filterTitle').value.trim().toLowerCase();
   let rows  = appData.requests;
-  if (cls) rows = rows.filter(r => r['학급'] === cls);
+  if (filterCls) rows = rows.filter(r => r['학급'] === filterCls);
   if (ti)  rows = rows.filter(r => String(r['도서명']).toLowerCase().includes(ti));
 
   const total = rows.length;
@@ -1058,7 +1062,6 @@ function renderStatusTable() {
 
   const stTxt = { pending:'검토 중', approved:'승인', rejected:'반려' };
   // 특정 학급 필터 시 단순 목록, 전체 시 학급별 그룹
-  const filterCls = document.getElementById('filterClass').value;
   let html = '';
   let rowNum = 1;
   const groupList = filterCls ? [filterCls] : CLASSES;
@@ -1132,9 +1135,8 @@ function renderAdminTable() {
   empty.style.display = 'none';
   const st = { pending: '검토 중', approved: '승인', rejected: '반려' };
 
-  const filterCls = document.getElementById('adminFilterClass').value;
   let html = '';
-  const groupList = filterCls ? [filterCls] : CLASSES;
+  const groupList = fc ? [fc] : CLASSES;
   groupList.forEach(c => {
     const group = rows.filter(r => r['학급'] === c);
     if (!group.length) return;
