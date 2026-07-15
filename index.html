@@ -629,7 +629,7 @@ async function loadData() {
       appData.books    = d.books    || [];
       appData.budget   = d.budget   || { total: 0, classes: {} };
       // 서버에 저장된 카카오 API 키 자동 적용 (관리자가 저장하면 모든 사용자에게 공유)
-      if (d.kakaoKey && !KAKAO_KEY) { KAKAO_KEY = d.kakaoKey; }
+      if (d.kakaoKey) { KAKAO_KEY = d.kakaoKey; localStorage.setItem('kakaoApiKey', d.kakaoKey); }
       renderMyRequests();
       if (document.getElementById('page-status').classList.contains('active')) renderStatusTable();
       if (document.getElementById('page-admin').classList.contains('active')) {
