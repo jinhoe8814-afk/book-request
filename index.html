@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>구매 희망 도서 신청 시스템</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--primary:#2563eb;--primary-dark:#1d4ed8;--bg:#f0f4ff;--shadow:0 2px 12px rgba(37,99,235,.08)}
+*{box-sizing:border-box}
+body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif;min-height:100vh}
+
+/* NAV */
+.main-nav{background:linear-gradient(135deg,#1e40af,#2563eb);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.main-nav .navbar-brand{font-size:1.15rem;font-weight:700;color:#fff!important}
+.main-nav .nav-link{color:rgba(255,255,255,.85)!important;font-weight:500;padding:.5rem 1rem;border-radius:6px;transition:all .2s}
+.main-nav .nav-link:hover,.main-nav .nav-link.active{background:rgba(255,255,255,.15);color:#fff!important}
+
+/* PAGE */
+.page{display:none;padding:1.75rem 0}
+.page.active{display:block}
+.section-title{font-size:1.35rem;font-weight:700;color:#1e40af;border-left:4px solid #2563eb;padding-left:.75rem;margin-bottom:1.5rem}
+
+/* CARD */
+.card{border:none;border-radius:12px;box-shadow:var(--shadow)}
+.form-label{font-weight:600;font-size:.88rem;color:#374151}
+.form-control,.form-select{border-radius:8px;border:1.5px solid #d1d5db;font-size:.93rem}
+.form-control:focus,.form-select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.btn{border-radius:8px;font-weight:600;font-size:.88rem}
+.btn-primary{background:var(--primary);border-color:var(--primary)}
+.btn-primary:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
+
+/* 네이버 도서 검색 버튼 */
+.naver-btn{background:#03c75a;border:none;color:#fff;font-size:.8rem;padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap;transition:background .2s}
+.naver-btn:hover{background:#02b350}
+.naver-btn:disabled{background:#aaa;cursor:not-allowed}
+.naver-spin{display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* CART */
+.cart-wrap{background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:1rem}
+.cart-empty{text-align:center;padding:1.5rem;color:#94a3b8;font-size:.9rem}
+.cart-table th{background:#eff6ff;color:#1e40af;font-size:.82rem;font-weight:700}
+.cart-table td{font-size:.85rem;vertical-align:middle}
+.cart-total{background:#eff6ff;border-radius:8px;padding:.6rem 1rem;font-weight:700;color:#1e40af;text-align:right}
+
+/* BADGES */
+.badge-class{font-size:.76rem;padding:2px 8px;border-radius:20px;font-weight:600}
+.class-1{background:#dbeafe;color:#1d4ed8}.class-2{background:#dcfce7;color:#15803d}
+.class-3{background:#fef9c3;color:#854d0e}.class-4{background:#fce7f3;color:#9d174d}
+.class-5{background:#ede9fe;color:#6d28d9}.class-6{background:#ffedd5;color:#c2410c}
+.class-7{background:#e0f2fe;color:#0369a1}.class-8{background:#f1f5f9;color:#475569}
+
+/* STATUS */
+.status-pending{background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:.76rem;font-weight:600}
+.status-approved{background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:20px;font-size:.76rem;font-weight:600}
+.status-rejected{background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:.76rem;font-weight:600}
+
+/* DUP */
+.dup-alert{background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:.75rem 1rem;font-size:.85rem}
+.dup-ok{background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:.6rem 1rem;font-size:.85rem}
+
+/* STAT CARD */
+.stat-card{border-radius:10px;padding:1rem 1.25rem}
+.stat-num{font-size:1.8rem;font-weight:800;line-height:1}
+.stat-label{font-size:.78rem;font-weight:600;margin-top:3px;opacity:.85}
+
+/* BUDGET BAR */
+.bbar-wrap{background:#e5e7eb;border-radius:999px;height:9px}
+.bbar{border-radius:999px;height:9px;transition:width .4s;background:var(--primary)}
+.bbar.warn{background:#d97706}.bbar.over{background:#dc2626}
+
+/* CLASS BUDGET BAR (신청탭) */
+.cls-budget-bar-outer{position:relative;height:22px;border-radius:999px;overflow:hidden;background:#e5e7eb}
+.cls-budget-bar-normal{position:absolute;left:0;top:0;height:100%;background:#2563eb;border-radius:999px 0 0 999px;transition:width .4s}
+.cls-budget-bar-reserve{position:absolute;top:0;height:100%;background:#f59e0b;transition:width .4s left .4s}
+.cls-budget-divider{position:absolute;top:0;width:2px;height:100%;background:#fff;z-index:2}
+.cls-budget-card{background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:.9rem 1rem}
+.cls-budget-card.warn{border-color:#fcd34d;background:#fffbeb}
+.cls-budget-card.over{border-color:#fca5a5;background:#fef2f2}
+
+/* 예비 배지 */
+.kind-normal{background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:12px;font-size:.73rem;font-weight:700}
+.kind-reserve{background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:12px;font-size:.73rem;font-weight:700}
+
+/* 카트 예비 섹션 */
+.cart-section-hdr{font-size:.8rem;font-weight:700;padding:.4rem .6rem;border-radius:6px;margin-bottom:.4rem}
+.cart-section-hdr.normal{background:#eff6ff;color:#1e40af}
+.cart-section-hdr.reserve{background:#fef3c7;color:#92400e}
+
+/* ADMIN TABS */
+.admin-tab-btn{border:none;background:none;padding:.55rem 1.1rem;font-weight:600;color:#6b7280;border-bottom:3px solid transparent;transition:all .2s}
+.admin-tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+.admin-tab-content{display:none}.admin-tab-content.active{display:block}
+
+/* TABLE */
+.table thead th{background:#eff6ff;color:#1e40af;font-weight:700;font-size:.82rem;border:none}
+.table td{font-size:.85rem;vertical-align:middle}
+.table-hover tbody tr:hover{background:#f8faff}
+
+/* MODAL OVERLAY */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center}
+.modal-overlay .modal-box{background:#fff;border-radius:14px;padding:2rem;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-overlay.hidden{display:none}
+
+/* 네이버 도서 검색 결과 */
+.naver-result{background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:.75rem 1rem}
+
+/* LOADING */
+.global-loading{position:fixed;inset:0;background:rgba(255,255,255,.75);z-index:8888;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem}
+.global-loading.hidden{display:none}
+.spinner-ring{width:44px;height:44px;border:4px solid #dbeafe;border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+.toast-msg{background:#1e293b;color:#fff;padding:.7rem 1.1rem;border-radius:10px;font-size:.87rem;box-shadow:0 4px 12px rgba(0,0,0,.2);animation:slideIn .3s ease;min-width:200px}
+.toast-msg.success{background:#166534}.toast-msg.danger{background:#991b1b}.toast-msg.warning{background:#92400e}
+@keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* SETUP */
+.setup-step{background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:1rem;margin-bottom:.75rem}
+.setup-step .step-num{background:var(--primary);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;flex-shrink:0}
+
+@media print{.main-nav,.no-print{display:none!important}.page{display:block!important;padding:0}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="main-nav navbar navbar-expand-lg">
+  <div class="container">
+    <a class="navbar-brand" href="#"><i class="bi bi-book-half me-2"></i>구매 희망 도서 신청</a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto gap-1">
+        <li class="nav-item"><a class="nav-link active" href="#" onclick="showPage('request')"><i class="bi bi-pencil-square me-1"></i>도서 신청</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('status')"><i class="bi bi-list-ul me-1"></i>신청 현황</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showAdminLogin()"><i class="bi bi-shield-lock me-1"></i>관리자</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- GLOBAL LOADING -->
+<div class="global-loading hidden" id="globalLoading">
+  <div class="spinner-ring"></div>
+  <div class="text-primary fw-bold" id="loadingMsg">데이터 불러오는 중...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- SETUP MODAL -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="text-center mb-3">
+      <i class="bi bi-gear-fill text-primary" style="font-size:2rem"></i>
+      <h5 class="mt-2 fw-bold">초기 설정</h5>
+      <p class="text-muted small mb-0">Google Apps Script URL을 입력하면 모든 기기에서 동시에 사용할 수 있습니다.</p>
+    </div>
+    <div class="mb-3">
+      <div class="setup-step d-flex gap-2 align-items-start">
+        <span class="step-num mt-1">1</span>
+        <div class="small">Google 스프레드시트 생성 → <strong>확장 프로그램 → Apps Script</strong></div>
+      </div>
+      <div class="setup-step d-flex gap-2 align-items-start">
+        <span class="step-num mt-1">2</span>
+        <div class="small"><strong>Code.gs</strong> 내용 전체 붙여넣기 후 저장</div>
+      </div>
+      <div class="setup-step d-flex gap-2 align-items-start">
+        <span class="step-num mt-1">3</span>
+        <div class="small"><strong>배포 → 새 배포</strong> → 유형: 웹 앱 → 액세스: 모든 사용자 → 배포</div>
+      </div>
+      <div class="setup-step d-flex gap-2 align-items-start">
+        <span class="step-num mt-1">4</span>
+        <div class="small">생성된 <strong>웹앱 URL</strong>을 아래에 붙여넣기</div>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Apps Script 웹앱 URL</label>
+      <input type="url" class="form-control" id="setupUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">카카오 REST API 키 <span class="text-muted small fw-normal">(도서 자동검색용 · 선택)</span></label>
+      <input type="text" class="form-control" id="setupKakaoKey" placeholder="카카오 REST API 키 입력 (선택사항)">
+      <div class="form-text">
+        <a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a>에서 앱 생성 후 REST API 키를 발급받으세요.
+      </div>
+    </div>
+    <button class="btn btn-primary w-100" onclick="saveSetup()"><i class="bi bi-check-lg me-1"></i>저장하고 시작</button>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="modal-overlay hidden" id="adminLoginModal">
+  <div class="modal-box text-center">
+    <i class="bi bi-shield-lock-fill text-primary" style="font-size:2.2rem"></i>
+    <h5 class="mt-3 mb-1 fw-bold">관리자 로그인</h5>
+    <p class="text-muted small mb-3">비밀번호를 입력해주세요</p>
+    <input type="password" id="adminPwInput" class="form-control text-center mb-3" placeholder="비밀번호" maxlength="10" style="letter-spacing:4px;font-size:1.2rem">
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary flex-grow-1" onclick="checkAdminPw()"><i class="bi bi-unlock me-1"></i>확인</button>
+      <button class="btn btn-outline-secondary flex-grow-1" onclick="closeAdminLogin()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 네이버 도서 검색 결과 MODAL -->
+<div class="modal-overlay hidden" id="yes24Modal">
+  <div class="modal-box" style="max-width:480px">
+    <h6 class="fw-bold mb-3"><i class="bi bi-search text-success me-2"></i>네이버 도서 검색 결과</h6>
+    <div id="yes24ResultBody"></div>
+    <div class="d-flex gap-2 mt-3">
+      <button class="btn btn-success flex-grow-1" onclick="applyYes24Result()"><i class="bi bi-check2 me-1"></i>이 도서로 입력</button>
+      <button class="btn btn-outline-secondary flex-grow-1" onclick="closeYes24Modal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: 도서 신청 ===== -->
+<div class="page active" id="page-request">
+  <div class="container" style="max-width:820px">
+    <div class="section-title"><i class="bi bi-pencil-square me-2"></i>구매 희망 도서 신청</div>
+
+    <!-- 학급 / 담임 -->
+    <div class="card mb-3">
+      <div class="card-body p-3">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label"><i class="bi bi-people me-1"></i>학급 선택 <span class="text-danger">*</span></label>
+            <select class="form-select" id="fClass" onchange="renderMyRequests()">
+              <option value="">-- 학급 선택 --</option>
+              <option>1학년</option><option>2학년</option><option>3학년</option>
+              <option>4학년</option><option>5학년</option><option>6학년</option>
+              <option>학습도움반</option><option>돌봄교실</option>
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label"><i class="bi bi-person me-1"></i>담임교사 이름 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="fTeacher" placeholder="예: 홍길동">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 도서 추가 폼 -->
+    <div class="card mb-3">
+      <div class="card-header bg-white py-2 px-3">
+        <span class="fw-bold text-primary small"><i class="bi bi-plus-circle me-1"></i>도서 추가</span>
+      </div>
+      <div class="card-body p-3">
+
+        <!-- 도서명 + 네이버 도서 검색 -->
+        <div class="mb-3">
+          <label class="form-label">도서명 <span class="text-danger">*</span></label>
+          <div class="d-flex gap-2">
+            <input type="text" class="form-control" id="fTitle" placeholder="도서 제목 입력 후 자동검색 버튼 클릭">
+            <button type="button" class="naver-btn" id="yes24Btn" onclick="autoFillYes24()">
+              <i class="bi bi-search me-1"></i>도서 자동검색
+            </button>
+          </div>
+          <div id="yes24Status" class="mt-1" style="font-size:.8rem;color:#166534"></div>
+        </div>
+
+        <!-- 지은이 / 출판사 / 정가 -->
+        <div class="row g-2 mb-3">
+          <div class="col-sm-4">
+            <label class="form-label">지은이 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="fAuthor" placeholder="저자명">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label">출판사 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="fPublisher" placeholder="출판사명">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label">정가 (원) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="fPrice" placeholder="12000" min="0">
+          </div>
+        </div>
+
+        <!-- 수량 + 신청 구분 -->
+        <div class="row g-2 mb-3 align-items-end">
+          <div class="col-sm-3">
+            <label class="form-label">수량 <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="fQty" value="1" min="1" max="99">
+          </div>
+          <div class="col-sm-9">
+            <label class="form-label">신청 구분</label>
+            <div class="d-flex gap-3 align-items-center" style="height:38px">
+              <div class="form-check mb-0">
+                <input class="form-check-input" type="radio" name="reqKind" id="kindNormal" value="일반" checked>
+                <label class="form-check-label small fw-bold" for="kindNormal" style="color:#1e40af">일반 신청</label>
+              </div>
+              <div class="form-check mb-0">
+                <input class="form-check-input" type="radio" name="reqKind" id="kindReserve" value="예비">
+                <label class="form-check-label small fw-bold" for="kindReserve" style="color:#92400e">
+                  예비 신청 <span class="text-muted" style="font-weight:400">(예산 12% 이내)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 중복 확인 결과 -->
+        <div id="dupResult" class="mb-3" style="display:none"></div>
+
+        <!-- 추가 버튼 -->
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-warning" onclick="checkDuplicate()">
+            <i class="bi bi-search me-1"></i>중복 확인
+          </button>
+          <button type="button" class="btn btn-success flex-grow-1" onclick="addToCart()">
+            <i class="bi bi-plus-lg me-1"></i>신청 목록에 추가
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 신청 목록 (카트) -->
+    <div class="card mb-3">
+      <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+        <span class="fw-bold text-primary small"><i class="bi bi-cart3 me-1"></i>신청 목록 <span class="badge bg-primary" id="cartCount">0</span>권</span>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="loadDraft()" title="임시저장 불러오기">
+            <i class="bi bi-folder2-open me-1"></i>불러오기
+          </button>
+          <button class="btn btn-outline-primary btn-sm" onclick="saveDraft()">
+            <i class="bi bi-floppy me-1"></i>임시저장
+          </button>
+          <button class="btn btn-outline-danger btn-sm" onclick="clearCart()">
+            <i class="bi bi-trash me-1"></i>전체 삭제
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="cartBody">
+          <div class="cart-empty"><i class="bi bi-cart-x d-block mb-2" style="font-size:1.8rem"></i>추가된 도서가 없습니다<br><small class="text-muted">위 폼에서 도서를 추가해 주세요</small></div>
+        </div>
+        <div id="cartFooter" style="display:none">
+          <div class="cart-total mt-2">
+            총 <span id="cartTotalQty">0</span>권 &nbsp;|&nbsp; 합계: <span id="cartTotalAmt">0</span>원
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary flex-grow-1 py-2" onclick="submitCart()">
+              <i class="bi bi-send me-1"></i>신청 제출
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 우리 학급 신청 현황 -->
+    <div class="card" id="myRequestsCard">
+      <div class="card-header bg-white py-2 px-3">
+        <span class="fw-bold text-primary small"><i class="bi bi-clipboard-data me-1"></i>우리 학급 신청 현황</span>
+      </div>
+      <div class="card-body p-0">
+        <div id="myRequestsBody" class="p-3 text-center text-muted small">학급을 선택하면 신청 현황이 표시됩니다</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: 신청 현황 ===== -->
+<div class="page" id="page-status">
+  <div class="container" style="max-width:1000px">
+    <div class="section-title"><i class="bi bi-list-ul me-2"></i>신청 현황</div>
+    <div class="card mb-3">
+      <div class="card-body p-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-sm-3">
+            <label class="form-label mb-1 small fw-bold">학급</label>
+            <select class="form-select form-select-sm" id="filterClass" onchange="renderStatusTable()">
+              <option value="">전체</option>
+              <option>1학년</option><option>2학년</option><option>3학년</option>
+              <option>4학년</option><option>5학년</option><option>6학년</option>
+              <option>학습도움반</option><option>돌봄교실</option>
+            </select>
+          </div>
+          <div class="col-sm-5">
+            <label class="form-label mb-1 small fw-bold">도서명 검색</label>
+            <input type="text" class="form-control form-control-sm" id="filterTitle" placeholder="도서명 입력" oninput="renderStatusTable()">
+          </div>
+          <div class="col-sm-2">
+            <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearFilters()"><i class="bi bi-x-circle me-1"></i>초기화</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-3 mb-3" id="statusSummary"></div>
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>번호</th><th>담임</th><th>도서명</th><th>지은이</th><th>출판사</th><th>정가</th><th>수량</th><th>금액</th></tr></thead>
+            <tbody id="statusTbody"></tbody>
+          </table>
+        </div>
+        <div class="text-center py-4 text-muted" id="statusEmpty" style="display:none"><i class="bi bi-inbox fs-2 d-block mb-2"></i>신청 내역이 없습니다</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: 관리자 ===== -->
+<div class="page" id="page-admin">
+  <div class="container" style="max-width:1100px">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="section-title mb-0"><i class="bi bi-shield-lock me-2"></i>관리자 대시보드</div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" onclick="loadData()"><i class="bi bi-arrow-clockwise me-1"></i>새로고침</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="adminLogout()"><i class="bi bi-box-arrow-right me-1"></i>로그아웃</button>
+      </div>
+    </div>
+    <div class="row g-3 mb-4" id="adminStats"></div>
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="border-bottom px-3 pt-2 d-flex gap-1">
+          <button class="admin-tab-btn active" onclick="switchTab('budget',this)"><i class="bi bi-wallet2 me-1"></i>예산 관리</button>
+          <button class="admin-tab-btn" onclick="switchTab('books',this)"><i class="bi bi-journals me-1"></i>기존 도서 목록</button>
+          <button class="admin-tab-btn" onclick="switchTab('requests',this)"><i class="bi bi-clipboard-check me-1"></i>신청 목록</button>
+        </div>
+        <div class="p-4">
+
+          <!-- TAB: 예산 -->
+          <div class="admin-tab-content active" id="tab-budget">
+            <div class="row g-4">
+              <div class="col-md-5">
+                <h6 class="fw-bold mb-3"><i class="bi bi-piggy-bank me-2 text-primary"></i>전체 예산</h6>
+                <div class="mb-4">
+                  <label class="form-label small">전체 예산 (원)</label>
+                  <input type="number" class="form-control" id="totalBudgetInput" placeholder="예: 1000000">
+                </div>
+                <h6 class="fw-bold mb-3"><i class="bi bi-building me-2 text-primary"></i>학급별 예산</h6>
+                <div id="classBudgetInputs"></div>
+                <button class="btn btn-primary w-100 mt-3" onclick="saveBudget()"><i class="bi bi-save me-1"></i>예산 저장</button>
+
+                <hr class="my-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-key me-2 text-warning"></i>도서 검색 API 설정</h6>
+                <div class="mb-2">
+                  <label class="form-label small">카카오 REST API 키</label>
+                  <div class="input-group">
+                    <input type="password" class="form-control form-control-sm" id="adminKakaoKey" placeholder="카카오 REST API 키">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="toggleKakaoKeyVisibility()"><i class="bi bi-eye" id="kakaoEyeIcon"></i></button>
+                  </div>
+                  <div class="form-text"><a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a> → 앱 만들기 → REST API 키</div>
+                </div>
+                <button class="btn btn-warning btn-sm w-100" onclick="saveKakaoKey()"><i class="bi bi-save me-1"></i>API 키 저장</button>
+              </div>
+              <div class="col-md-7">
+                <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2 text-primary"></i>예산 사용 현황</h6>
+                <div id="budgetOverview"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: 기존 도서 -->
+          <div class="admin-tab-content" id="tab-books">
+            <div class="row g-4">
+              <div class="col-md-5">
+                <h6 class="fw-bold mb-3"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>엑셀/CSV 업로드</h6>
+                <div class="p-3 rounded-3 mb-3" style="background:#f0fdf4;border:1.5px dashed #86efac">
+                  <div class="small text-muted mb-2">컬럼 순서: <strong>도서명, 지은이, 출판사</strong> (1행 헤더)</div>
+                  <input type="file" class="form-control form-control-sm" id="bookFileInput" accept=".xlsx,.xls,.csv" onchange="uploadBookFile(this)">
+                </div>
+                <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-primary"></i>직접 추가</h6>
+                <input type="text" class="form-control form-control-sm mb-2" id="addBookTitle" placeholder="도서명 *">
+                <input type="text" class="form-control form-control-sm mb-2" id="addBookAuthor" placeholder="지은이">
+                <input type="text" class="form-control form-control-sm mb-2" id="addBookPublisher" placeholder="출판사">
+                <button class="btn btn-primary btn-sm w-100" onclick="addBookManual()"><i class="bi bi-plus me-1"></i>추가</button>
+              </div>
+              <div class="col-md-7">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="fw-bold mb-0">등록된 도서 <span class="badge bg-primary" id="bookCount">0</span></h6>
+                  <div class="d-flex gap-2">
+                    <input type="text" class="form-control form-control-sm" id="searchBook" placeholder="검색..." oninput="renderBookList()" style="width:140px">
+                    <button class="btn btn-outline-danger btn-sm" onclick="clearAllBooks()"><i class="bi bi-trash"></i></button>
+                  </div>
+                </div>
+                <div style="max-height:380px;overflow-y:auto">
+                  <table class="table table-sm mb-0">
+                    <thead><tr><th>도서명</th><th>지은이</th><th>출판사</th><th></th></tr></thead>
+                    <tbody id="bookListTbody"></tbody>
+                  </table>
+                  <div class="text-center py-3 text-muted small" id="bookEmpty" style="display:none"><i class="bi bi-inbox me-1"></i>등록된 도서 없음</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: 신청 목록 -->
+          <div class="admin-tab-content" id="tab-requests">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+              <div class="d-flex gap-2 flex-wrap">
+                <select class="form-select form-select-sm" id="adminFilterClass" onchange="renderAdminTable()" style="width:130px">
+                  <option value="">전체 학급</option>
+                  <option>1학년</option><option>2학년</option><option>3학년</option>
+                  <option>4학년</option><option>5학년</option><option>6학년</option>
+                  <option>학습도움반</option><option>돌봄교실</option>
+                </select>
+                <select class="form-select form-select-sm" id="adminFilterStatus" onchange="renderAdminTable()" style="width:110px">
+                  <option value="">전체 상태</option>
+                  <option value="pending">검토 중</option>
+                  <option value="approved">승인</option>
+                  <option value="rejected">반려</option>
+                </select>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm" onclick="downloadExcel()"><i class="bi bi-file-earmark-excel me-1"></i>엑셀</button>
+                <button class="btn btn-danger btn-sm" onclick="downloadPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF 출력</button>
+                <button class="btn btn-outline-danger btn-sm" onclick="clearAllRequests()"><i class="bi bi-trash me-1"></i>전체 삭제</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead><tr>
+                  <th><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+                  <th>담임</th><th>도서명</th><th>지은이</th><th>출판사</th>
+                  <th>정가</th><th>수량</th><th>금액</th><th>상태</th><th>신청일</th><th>관리</th>
+                </tr></thead>
+                <tbody id="adminTbody"></tbody>
+              </table>
+              <div class="text-center py-4 text-muted" id="adminEmpty" style="display:none"><i class="bi bi-inbox fs-2 d-block mb-2"></i>신청 내역이 없습니다</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-success" onclick="bulkAction('approved')"><i class="bi bi-check2 me-1"></i>선택 승인</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="bulkAction('rejected')"><i class="bi bi-x me-1"></i>선택 반려</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+// ===================== CONFIG =====================
+const ADMIN_PW = '5555';
+const CLASSES = ['1학년','2학년','3학년','4학년','5학년','6학년','학습도움반','돌봄교실'];
+const CLASS_COLORS = ['class-1','class-2','class-3','class-4','class-5','class-6','class-7','class-8'];
+
+// ===================== STATE =====================
+let API_URL    = localStorage.getItem('appsScriptUrl') || '';
+let KAKAO_KEY  = localStorage.getItem('kakaoApiKey')   || '';
+let adminLoggedIn = false;
+let yes24Pending = null;
+let cart = []; // 신청 카트
+
+const appData = { requests: [], books: [], budget: { total: 0, classes: {} } };
+
+// ===================== UTILS =====================
+function cls(c) { const i = CLASSES.indexOf(c); return i >= 0 ? CLASS_COLORS[i] : 'class-8'; }
+function fmtD(iso) { return iso ? String(iso).slice(0, 10) : ''; }
+function toast(msg, type = '', dur = 3000) {
+  const c = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  el.innerHTML = `<i class="bi ${type==='success'?'bi-check-circle':type==='danger'?'bi-x-circle':'bi-info-circle'} me-2"></i>${msg}`;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; setTimeout(() => el.remove(), 400); }, dur);
+}
+function loading(show, msg = '처리 중...') {
+  document.getElementById('globalLoading').classList.toggle('hidden', !show);
+  document.getElementById('loadingMsg').textContent = msg;
+}
+
+// ===================== API =====================
+async function api(params) {
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const resp = await fetch(url);
+  return resp.json();
+}
+
+async function apiBatch(items, action, chunkSize = 30) {
+  // 대량 데이터를 청크로 나눠 전송
+  for (let i = 0; i < items.length; i += chunkSize) {
+    await api({ action, data: JSON.stringify(items.slice(i, i + chunkSize)) });
+  }
+}
+
+// ===================== SETUP =====================
+function saveSetup() {
+  const url = document.getElementById('setupUrlInput').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    toast('올바른 Apps Script URL을 입력해주세요', 'danger'); return;
+  }
+  API_URL = url;
+  localStorage.setItem('appsScriptUrl', url);
+  const kakaoKey = document.getElementById('setupKakaoKey').value.trim();
+  if (kakaoKey) { KAKAO_KEY = kakaoKey; localStorage.setItem('kakaoApiKey', kakaoKey); }
+  document.getElementById('setupModal').classList.add('hidden');
+  loadData();
+}
+function saveKakaoKey() {
+  const key = document.getElementById('adminKakaoKey').value.trim();
+  if (!key) { toast('API 키를 입력해주세요', 'warning'); return; }
+  KAKAO_KEY = key;
+  localStorage.setItem('kakaoApiKey', key);
+  toast('카카오 API 키 저장 완료', 'success');
+}
+function toggleKakaoKeyVisibility() {
+  const inp = document.getElementById('adminKakaoKey');
+  const icon = document.getElementById('kakaoEyeIcon');
+  if (inp.type === 'password') { inp.type = 'text'; icon.className = 'bi bi-eye-slash'; }
+  else { inp.type = 'password'; icon.className = 'bi bi-eye'; }
+}
+
+// ===================== DATA LOAD =====================
+async function loadData() {
+  loading(true, '데이터 불러오는 중...');
+  try {
+    const d = await api({ action: 'getData' });
+    if (d.ok) {
+      appData.requests = d.requests || [];
+      appData.books    = d.books    || [];
+      appData.budget   = d.budget   || { total: 0, classes: {} };
+      renderMyRequests();
+      if (document.getElementById('page-status').classList.contains('active')) renderStatusTable();
+      if (document.getElementById('page-admin').classList.contains('active')) {
+        renderAdminStats(); renderAdminTable(); renderBudgetOverview(); renderBookList();
+      }
+    } else {
+      toast('데이터 로드 실패: ' + (d.error || ''), 'danger');
+    }
+  } catch (e) {
+    toast('서버 연결 오류: ' + e.message, 'danger');
+  } finally {
+    loading(false);
+  }
+}
+
+// ===================== NAVIGATION =====================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+  document.getElementById(`page-${id}`).classList.add('active');
+  document.querySelector(`.nav-link[onclick*="'${id}'"]`)?.classList.add('active');
+  if (id === 'status') renderStatusTable();
+  if (id === 'admin') { renderAdminStats(); renderAdminTable(); renderBudgetOverview(); renderClassBudgetInputs(); if(KAKAO_KEY) document.getElementById('adminKakaoKey').value = KAKAO_KEY; }
+}
+
+// ===================== YES24 자동입력 =====================
+async function autoFillYes24() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { toast('도서명을 먼저 입력해주세요', 'warning'); document.getElementById('fTitle').focus(); return; }
+
+  const btn = document.getElementById('yes24Btn');
+  const status = document.getElementById('yes24Status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="naver-spin"></span> 검색 중...';
+  status.textContent = '';
+
+  try {
+    let d = null;
+
+    // ① 카카오 Book API (브라우저 직접 호출, 가장 안정적)
+    if (KAKAO_KEY) {
+      const resp = await fetch(
+        `https://dapi.kakao.com/v3/search/book?query=${encodeURIComponent(title)}&size=5`,
+        { headers: { Authorization: `KakaoAK ${KAKAO_KEY}` } }
+      );
+      if (resp.ok) {
+        const json = await resp.json();
+        const doc = json.documents && json.documents[0];
+        if (doc) {
+          d = {
+            ok: true,
+            title:     doc.title,
+            author:    (doc.authors || [])[0] || '',
+            publisher: doc.publisher || '',
+            price:     doc.price || 0,   // 정가
+            url:       doc.url || '',
+            source:    'kakao'
+          };
+        }
+      }
+    }
+
+    // ② 카카오 키 없거나 실패 시 → Apps Script 통해 Google Books 시도
+    if (!d) {
+      const res = await api({ action: 'searchBook', q: title });
+      if (res.ok) d = res;
+    }
+
+    if (d && d.ok) {
+      yes24Pending = d;
+      const srcLabel = d.source === 'kakao' ? '카카오 도서' : d.source === 'google' ? 'Google Books' : '네이버 도서';
+      const srcColor = d.source === 'kakao' ? '#FEE500' : '#34a853';
+      document.getElementById('yes24ResultBody').innerHTML = `
+        <div class="naver-result">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="fw-bold">${d.title}</div>
+            <span class="badge ms-2" style="background:${srcColor};color:#000;font-size:.68rem">${srcLabel}</span>
+          </div>
+          <div class="row g-1 small">
+            <div class="col-4 text-muted">지은이</div><div class="col-8">${d.author || '<span class="text-danger">정보 없음 — 직접 입력</span>'}</div>
+            <div class="col-4 text-muted">출판사</div><div class="col-8">${d.publisher || '<span class="text-danger">정보 없음 — 직접 입력</span>'}</div>
+            <div class="col-4 text-muted">정가</div><div class="col-8 fw-bold ${d.price ? 'text-success' : 'text-danger'}">${d.price ? d.price.toLocaleString()+'원' : '정보 없음 — 직접 입력'}</div>
+          </div>
+        </div>
+        ${d.url ? `<div class="mt-2 small"><a href="${d.url}" target="_blank" class="text-success"><i class="bi bi-box-arrow-up-right me-1"></i>${srcLabel}에서 직접 확인하기</a></div>` : ''}
+        <p class="small text-muted mt-2 mb-0">※ 첫 번째 검색 결과입니다. "이 도서로 입력" 후 정보를 확인·수정해 주세요.</p>`;
+      document.getElementById('yes24Modal').classList.remove('hidden');
+    } else {
+      if (!KAKAO_KEY) {
+        status.innerHTML = `<i class="bi bi-info-circle text-warning me-1"></i>카카오 API 키를 설정하면 검색 정확도가 높아집니다. <a href="#" onclick="showPage('admin');switchTab('budget',document.querySelector('.admin-tab-btn'));return false" class="text-warning">관리자에서 설정 →</a>`;
+      } else {
+        status.innerHTML = `<i class="bi bi-exclamation-triangle text-warning me-1"></i>검색 결과가 없습니다. 도서명을 다르게 입력해 보세요. <a href="https://search.kakao.com/search?q=${encodeURIComponent(title)}" target="_blank" class="text-warning">카카오에서 검색 →</a>`;
+      }
+    }
+  } catch (e) {
+    status.innerHTML = `<i class="bi bi-x-circle text-danger me-1"></i>오류: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search me-1"></i>도서 자동검색';
+  }
+}
+
+function applyYes24Result() {
+  if (!yes24Pending) return;
+  document.getElementById('fTitle').value     = yes24Pending.title     || '';
+  document.getElementById('fAuthor').value    = yes24Pending.author    || '';
+  document.getElementById('fPublisher').value = yes24Pending.publisher || '';
+  document.getElementById('fPrice').value     = yes24Pending.price     || '';
+  closeYes24Modal();
+  toast('도서 정보가 입력되었습니다', 'success');
+  document.getElementById('fQty').focus();
+}
+function closeYes24Modal() { document.getElementById('yes24Modal').classList.add('hidden'); }
+
+// ===================== DUPLICATE CHECK =====================
+function checkDuplicate() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { toast('도서명을 입력해주세요', 'warning'); return; }
+  const low = title.toLowerCase().replace(/\s/g, '');
+  const dups = appData.books.filter(b => {
+    const bt = String(b['도서명'] || '').toLowerCase().replace(/\s/g, '');
+    return bt.includes(low) || low.includes(bt);
+  });
+  const div = document.getElementById('dupResult');
+  div.style.display = 'block';
+  if (dups.length) {
+    div.innerHTML = `<div class="dup-alert"><div class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-circle-fill me-1"></i>중복 도서 발견!</div>
+      <ul class="mb-0">${dups.map(d=>`<li><strong>${d['도서명']}</strong> ${d['지은이']?'/ '+d['지은이']:''} ${d['출판사']?'('+d['출판사']+')':''}</li>`).join('')}</ul></div>`;
+  } else {
+    div.innerHTML = `<div class="dup-ok"><i class="bi bi-check-circle-fill text-success me-2"></i>중복 도서가 없습니다. 신청 가능합니다.</div>`;
+  }
+}
+
+// ===================== CART =====================
+function addToCart() {
+  const title     = document.getElementById('fTitle').value.trim();
+  const author    = document.getElementById('fAuthor').value.trim();
+  const publisher = document.getElementById('fPublisher').value.trim();
+  const price     = parseInt(document.getElementById('fPrice').value) || 0;
+  const qty       = parseInt(document.getElementById('fQty').value) || 1;
+  const kind      = document.querySelector('input[name="reqKind"]:checked')?.value || '일반';
+
+  if (!title || !author || !publisher || !price) {
+    toast('도서명, 지은이, 출판사, 정가는 필수입니다', 'danger'); return;
+  }
+
+  cart.push({ title, author, publisher, price, qty, kind });
+  renderCart();
+  // 입력 폼 초기화
+  ['fTitle','fAuthor','fPublisher','fPrice'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('kindNormal').checked = true; // 기본값 복원
+  document.getElementById('fQty').value = 1;
+  document.getElementById('dupResult').style.display = 'none';
+  toast(`"${title}" 추가됨 (총 ${cart.length}권)`, 'success');
+}
+
+function removeFromCart(idx) {
+  cart.splice(idx, 1);
+  renderCart();
+}
+
+function clearCart() {
+  if (!cart.length) return;
+  if (!confirm('신청 목록을 모두 삭제하시겠습니까?')) return;
+  cart = []; renderCart();
+}
+
+function renderCart() {
+  const count = cart.length;
+  document.getElementById('cartCount').textContent = count;
+  const body   = document.getElementById('cartBody');
+  const footer = document.getElementById('cartFooter');
+  if (!count) {
+    body.innerHTML = `<div class="cart-empty"><i class="bi bi-cart-x d-block mb-2" style="font-size:1.8rem"></i>추가된 도서가 없습니다<br><small class="text-muted">위 폼에서 도서를 추가해 주세요</small></div>`;
+    footer.style.display = 'none'; return;
+  }
+  const totalAmt = cart.reduce((s, r) => s + r.price * r.qty, 0);
+  const totalQty = cart.reduce((s, r) => s + r.qty, 0);
+
+  function cartSection(items, idxOffset, label, hdrClass) {
+    if (!items.length) return '';
+    const subAmt = items.reduce((s,r)=>s+r.price*r.qty,0);
+    return `<div class="cart-section-hdr ${hdrClass}">${label} ${items.length}권 · ${subAmt.toLocaleString()}원</div>
+    <div class="table-responsive mb-3"><table class="table cart-table table-sm mb-0">
+      <thead><tr><th>번호</th><th>도서명</th><th>지은이</th><th>출판사</th><th>정가</th><th>수량</th><th>금액</th><th></th></tr></thead>
+      <tbody>${items.map((r,i)=>`<tr>
+        <td class="text-muted">${idxOffset+i+1}</td>
+        <td class="fw-bold">${r.title}</td><td>${r.author}</td><td>${r.publisher}</td>
+        <td class="text-end">${r.price.toLocaleString()}</td>
+        <td class="text-center">${r.qty}</td>
+        <td class="text-end">${(r.price*r.qty).toLocaleString()}</td>
+        <td><button class="btn btn-outline-danger btn-sm py-0 px-1" onclick="removeFromCart(${cart.indexOf(r)})"><i class="bi bi-x" style="font-size:.75rem"></i></button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+
+  const normalItems  = cart.filter(r => r.kind !== '예비');
+  const reserveItems = cart.filter(r => r.kind === '예비');
+  body.innerHTML = cartSection(normalItems, 0, '📘 일반 신청', 'normal')
+                 + cartSection(reserveItems, normalItems.length, '📙 예비 신청', 'reserve');
+  document.getElementById('cartTotalQty').textContent = totalQty;
+  document.getElementById('cartTotalAmt').textContent = totalAmt.toLocaleString();
+  footer.style.display = '';
+}
+
+// ===================== DRAFT =====================
+function saveDraft() {
+  if (!cart.length) { toast('저장할 도서가 없습니다', 'warning'); return; }
+  const cls = document.getElementById('fClass').value;
+  const teacher = document.getElementById('fTeacher').value.trim();
+  localStorage.setItem('bookDraft', JSON.stringify({ cls, teacher, cart, saved: new Date().toISOString() }));
+  toast('임시저장 완료!', 'success');
+}
+function loadDraft() {
+  const d = JSON.parse(localStorage.getItem('bookDraft') || 'null');
+  if (!d) { toast('저장된 임시저장이 없습니다', 'warning'); return; }
+  if (d.cls) document.getElementById('fClass').value = d.cls;
+  if (d.teacher) document.getElementById('fTeacher').value = d.teacher;
+  cart = d.cart || [];
+  renderCart();
+  renderMyRequests();
+  const dt = d.saved ? fmtD(d.saved) : '';
+  toast(`임시저장 불러오기 완료 (저장일: ${dt})`, 'success');
+}
+
+// ===================== SUBMIT =====================
+async function submitCart() {
+  const cls     = document.getElementById('fClass').value;
+  const teacher = document.getElementById('fTeacher').value.trim();
+  if (!cls || !teacher) { toast('학급과 담임교사 이름을 입력해주세요', 'danger'); return; }
+  if (!cart.length) { toast('신청할 도서가 없습니다', 'warning'); return; }
+
+  // 예산 체크 (일반 / 예비 분리)
+  const budget = appData.budget;
+  const classBudget = budget.classes[cls] || 0;
+  if (classBudget > 0) {
+    const existReqs = appData.requests.filter(r => r['학급'] === cls && r['상태'] !== '반려');
+    const usedNormal  = existReqs.filter(r => r['종류'] !== '예비').reduce((s,r) => s + Number(r['정가'])*Number(r['수량']), 0);
+    const usedReserve = existReqs.filter(r => r['종류'] === '예비').reduce((s,r) => s + Number(r['정가'])*Number(r['수량']), 0);
+    const newNormal   = cart.filter(r=>r.kind!=='예비').reduce((s,r)=>s+r.price*r.qty, 0);
+    const newReserve  = cart.filter(r=>r.kind==='예비').reduce((s,r)=>s+r.price*r.qty, 0);
+    const reserveLimit = Math.floor(classBudget * 0.12);
+    let warn = '';
+    if (usedNormal + newNormal > classBudget)
+      warn += `• 일반 신청이 학급 예산을 초과합니다\n  (사용: ${(usedNormal+newNormal).toLocaleString()}원 / 배정: ${classBudget.toLocaleString()}원)\n`;
+    if (usedReserve + newReserve > reserveLimit)
+      warn += `• 예비 신청이 예비 한도(12%)를 초과합니다\n  (사용: ${(usedReserve+newReserve).toLocaleString()}원 / 한도: ${reserveLimit.toLocaleString()}원)\n`;
+    if (warn && !confirm(`⚠️ 예산 초과 경고\n\n${warn}\n그래도 제출하시겠습니까?`)) return;
+  }
+
+  loading(true, `${cart.length}권 신청 중...`);
+  try {
+    const now = new Date().toISOString();
+    const items = cart.map((r, i) => ({
+      id: Date.now() + i,
+      class: cls, teacher,
+      title: r.title, author: r.author, publisher: r.publisher,
+      price: r.price, qty: r.qty, kind: r.kind || '일반',
+      status: 'pending', date: now
+    }));
+
+    // 30개씩 청크로 전송
+    const CHUNK = 30;
+    for (let i = 0; i < items.length; i += CHUNK) {
+      await api({ action: 'addRequests', data: JSON.stringify(items.slice(i, i + CHUNK)) });
+    }
+
+    // 로컬 상태 업데이트
+    items.forEach(it => appData.requests.push({
+      id: it.id, 학급: it.class, 담임: it.teacher,
+      도서명: it.title, 지은이: it.author, 출판사: it.publisher,
+      정가: it.price, 수량: it.qty, 종류: it.kind || '일반',
+      상태: 'pending', 신청일: it.date
+    }));
+
+    cart = [];
+    localStorage.removeItem('bookDraft');
+    renderCart();
+    renderMyRequests();
+    toast(`${items.length}권 신청 완료!`, 'success');
+  } catch (e) {
+    toast('제출 오류: ' + e.message, 'danger');
+  } finally {
+    loading(false);
+  }
+}
+
+// ===================== MY REQUESTS (우리 학급 현황 + 예산 바) =====================
+function renderMyRequests() {
+  const cls = document.getElementById('fClass').value;
+  const div = document.getElementById('myRequestsBody');
+  if (!cls) { div.innerHTML = '<div class="p-3 text-center text-muted small">학급을 선택하면 신청 현황이 표시됩니다</div>'; return; }
+
+  const budget = appData.budget;
+  const classBudget = budget.classes[cls] || 0;
+  const reserveLimit = Math.floor(classBudget * 0.12);
+
+  const rows = appData.requests.filter(r => r['학급'] === cls);
+  const activeRows = rows.filter(r => r['상태'] !== '반려');
+  const usedNormal  = activeRows.filter(r => r['종류'] !== '예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+  const usedReserve = activeRows.filter(r => r['종류'] === '예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+
+  // ── 예산 바 ──────────────────────────────────────
+  let budgetHtml = '';
+  if (classBudget > 0) {
+    // 바 전체 너비 = 112% 기준
+    const total112 = classBudget * 1.12;
+    const normalPct  = Math.min(100, usedNormal / total112 * 100);
+    const reservePct = Math.min(100 - normalPct, usedReserve / total112 * 100);
+    const dividerPct = classBudget / total112 * 100; // 100% 경계선 위치
+    const remainNormal  = Math.max(0, classBudget - usedNormal);
+    const remainReserve = Math.max(0, reserveLimit - usedReserve);
+
+    const isOverNormal  = usedNormal  > classBudget;
+    const isOverReserve = usedReserve > reserveLimit;
+    const cardCls = (isOverNormal || isOverReserve) ? 'over' : usedNormal/classBudget > 0.8 ? 'warn' : '';
+
+    budgetHtml = `<div class="cls-budget-card ${cardCls} mb-3 mx-3 mt-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-bold small"><i class="bi bi-wallet2 me-1 text-primary"></i>학급 예산 현황</span>
+        <span class="small text-muted fw-bold">${cls}</span>
+      </div>
+
+      <!-- 예산 바 -->
+      <div class="cls-budget-bar-outer mb-2" title="배정 예산 기준 112% 구간 표시">
+        <div class="cls-budget-bar-normal" style="width:${normalPct.toFixed(1)}%"></div>
+        <div class="cls-budget-bar-reserve" style="left:${normalPct.toFixed(1)}%;width:${reservePct.toFixed(1)}%"></div>
+        <div class="cls-budget-divider" style="left:${dividerPct.toFixed(1)}%" title="배정 예산 100% 기준선"></div>
+      </div>
+      <div class="d-flex justify-content-between" style="font-size:.72rem;color:#6b7280;margin-bottom:.1rem">
+        <span>0</span>
+        <span style="position:absolute;left:${dividerPct.toFixed(1)}%;transform:translateX(-50%);font-size:.68rem;color:#1e40af;font-weight:600">100%</span>
+        <span>112%</span>
+      </div>
+
+      <!-- 수치 -->
+      <div class="row g-2 mt-1">
+        <div class="col-6 col-md-3">
+          <div class="small text-muted">배정 예산</div>
+          <div class="fw-bold" style="color:#1e40af">${classBudget.toLocaleString()}원</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="small text-muted"><span class="kind-normal me-1">일반</span>사용</div>
+          <div class="fw-bold ${isOverNormal?'text-danger':''}">${usedNormal.toLocaleString()}원</div>
+          <div class="text-muted" style="font-size:.72rem">잔여 ${remainNormal.toLocaleString()}원</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="small text-muted"><span class="kind-reserve me-1">예비</span>사용</div>
+          <div class="fw-bold ${isOverReserve?'text-danger':'text-warning'}">${usedReserve.toLocaleString()}원</div>
+          <div class="text-muted" style="font-size:.72rem">한도 ${reserveLimit.toLocaleString()}원 · 잔여 ${remainReserve.toLocaleString()}원</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="small text-muted">예비 한도 (12%)</div>
+          <div class="fw-bold text-warning">${reserveLimit.toLocaleString()}원</div>
+        </div>
+      </div>
+    </div>`;
+  } else {
+    budgetHtml = `<div class="px-3 pt-3 pb-1 small text-muted"><i class="bi bi-info-circle me-1"></i>관리자에서 학급 예산을 설정하면 예산 현황이 표시됩니다.</div>`;
+  }
+
+  if (!rows.length) {
+    div.innerHTML = budgetHtml + `<div class="p-3 text-center text-muted small"><i class="bi bi-inbox me-1"></i><strong>${cls}</strong>의 신청 내역이 없습니다</div>`;
+    return;
+  }
+
+  div.innerHTML = budgetHtml + `<div class="table-responsive"><table class="table table-sm table-hover mb-0">
+    <thead><tr><th>구분</th><th>도서명</th><th>지은이</th><th>정가</th><th>수량</th><th>금액</th><th>신청일</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td><span class="${r['종류']==='예비'?'kind-reserve':'kind-normal'}">${r['종류']||'일반'}</span></td>
+      <td class="fw-bold small">${r['도서명']}</td>
+      <td class="small text-muted">${r['지은이']}</td>
+      <td class="text-end small">${Number(r['정가']).toLocaleString()}</td>
+      <td class="text-center small">${r['수량']}</td>
+      <td class="text-end small">${(Number(r['정가'])*Number(r['수량'])).toLocaleString()}</td>
+      <td class="small text-muted">${fmtD(r['신청일'])}</td>
+      <td class="text-center"><button class="btn btn-outline-danger btn-sm py-0 px-1" style="font-size:.72rem" onclick="deleteMyRequest('${r['id']}','${r['도서명'].replace(/'/g,"\\'")}')"><i class="bi bi-trash3"></i></button></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function deleteMyRequest(id, title) {
+  if (!confirm(`"${title}" 신청을 취소하시겠습니까?`)) return;
+  try {
+    const res = await api({ action: 'deleteRequest', id });
+    if (res.ok) {
+      appData.requests = appData.requests.filter(r => String(r['id']) !== String(id));
+      renderMyRequests();
+      renderStatusTable();
+      toast(`"${title}" 신청이 취소되었습니다`, 'success');
+    } else {
+      toast(res.msg || '삭제 실패', 'danger');
+    }
+  } catch(e) {
+    toast('오류: ' + e.message, 'danger');
+  }
+}
+
+// ===================== STATUS TABLE =====================
+function clearFilters() {
+  document.getElementById('filterClass').value = '';
+  document.getElementById('filterTitle').value = '';
+  renderStatusTable();
+}
+function renderStatusTable() {
+  const cls = document.getElementById('filterClass').value;
+  const ti  = document.getElementById('filterTitle').value.trim().toLowerCase();
+  let rows  = appData.requests;
+  if (cls) rows = rows.filter(r => r['학급'] === cls);
+  if (ti)  rows = rows.filter(r => String(r['도서명']).toLowerCase().includes(ti));
+
+  const total = rows.length;
+  const amt   = rows.reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+  const normalAmt  = rows.filter(r=>r['종류']!=='예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+  const reserveAmt = rows.filter(r=>r['종류']==='예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+  document.getElementById('statusSummary').innerHTML = `
+    <div class="col-6 col-md-3"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${total}</div><div class="stat-label text-primary">전체 신청</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card" style="background:#dbeafe"><div class="stat-num text-blue-700" style="color:#1d4ed8">${normalAmt.toLocaleString()}</div><div class="stat-label" style="color:#1d4ed8">일반 금액(원)</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card" style="background:#fef3c7"><div class="stat-num" style="color:#92400e">${reserveAmt.toLocaleString()}</div><div class="stat-label" style="color:#92400e">예비 금액(원)</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card" style="background:#f8faff"><div class="stat-num text-primary" style="font-size:1.3rem">${amt.toLocaleString()}</div><div class="stat-label text-primary">총 금액(원)</div></div></div>`;
+
+  const tbody = document.getElementById('statusTbody');
+  const empty = document.getElementById('statusEmpty');
+  if (!rows.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  const stTxt = { pending:'검토 중', approved:'승인', rejected:'반려' };
+  // 특정 학급 필터 시 단순 목록, 전체 시 학급별 그룹
+  const filterCls = document.getElementById('filterClass').value;
+  let html = '';
+  let rowNum = 1;
+  const groupList = filterCls ? [filterCls] : CLASSES;
+  groupList.forEach(c => {
+    const group = rows.filter(r => r['학급'] === c);
+    if (!group.length) return;
+    const subAmt = group.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+    html += `<tr style="background:#eff6ff"><td colspan="8" class="fw-bold py-2 px-3" style="font-size:.85rem">
+      <span class="badge-class ${cls(c)} me-2">${c}</span>
+      <span class="text-muted fw-normal small">${group.length}권 | 소계: ${subAmt.toLocaleString()}원</span>
+    </td></tr>`;
+    group.forEach(r => {
+      html += `<tr>
+        <td class="text-muted small">${rowNum++}</td>
+        <td>${r['담임']}</td><td class="fw-bold">${r['도서명']}</td>
+        <td>${r['지은이']}</td><td>${r['출판사']}</td>
+        <td class="text-end">${Number(r['정가']).toLocaleString()}</td>
+        <td class="text-center">${r['수량']}</td>
+        <td class="text-end fw-bold">${(Number(r['정가'])*Number(r['수량'])).toLocaleString()}</td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML = html;
+}
+
+// ===================== ADMIN AUTH =====================
+function showAdminLogin() {
+  if (adminLoggedIn) { showPage('admin'); return; }
+  document.getElementById('adminLoginModal').classList.remove('hidden');
+  document.getElementById('adminPwInput').value = '';
+  setTimeout(() => document.getElementById('adminPwInput').focus(), 100);
+}
+function closeAdminLogin() { document.getElementById('adminLoginModal').classList.add('hidden'); }
+function checkAdminPw() {
+  if (document.getElementById('adminPwInput').value === ADMIN_PW) {
+    adminLoggedIn = true; closeAdminLogin(); showPage('admin');
+    renderClassBudgetInputs(); renderBookList(); renderBudgetOverview();
+    toast('관리자 로그인', 'success');
+  } else {
+    document.getElementById('adminPwInput').classList.add('is-invalid');
+    toast('비밀번호 오류', 'danger');
+    setTimeout(() => document.getElementById('adminPwInput').classList.remove('is-invalid'), 1200);
+  }
+}
+function adminLogout() { adminLoggedIn = false; showPage('request'); toast('로그아웃'); }
+document.getElementById('adminPwInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkAdminPw(); });
+
+// ===================== ADMIN STATS =====================
+function renderAdminStats() {
+  const r = appData.requests;
+  const used = r.filter(x => x['상태'] !== '반려').reduce((s,x) => s + Number(x['정가']) * Number(x['수량']), 0);
+  document.getElementById('adminStats').innerHTML = `
+    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${r.length}</div><div class="stat-label text-primary"><i class="bi bi-clipboard me-1"></i>전체 신청</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#fffbeb"><div class="stat-num text-warning">${r.filter(x=>x['상태']==='pending').length}</div><div class="stat-label text-warning"><i class="bi bi-hourglass-split me-1"></i>검토 중</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#f0fdf4"><div class="stat-num text-success">${r.filter(x=>x['상태']==='approved').length}</div><div class="stat-label text-success"><i class="bi bi-check-circle me-1"></i>승인</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#fdf4ff"><div class="stat-num" style="color:#7c3aed;font-size:1.3rem">${used.toLocaleString()}</div><div class="stat-label" style="color:#7c3aed"><i class="bi bi-wallet me-1"></i>사용 예산(원)</div></div></div>`;
+}
+
+// ===================== ADMIN TABLE =====================
+function renderAdminTable() {
+  const fc = document.getElementById('adminFilterClass').value;
+  const fs = document.getElementById('adminFilterStatus').value;
+  let rows = appData.requests;
+  if (fc) rows = rows.filter(r => r['학급'] === fc);
+  if (fs) rows = rows.filter(r => r['상태'] === fs);
+
+  const tbody = document.getElementById('adminTbody');
+  const empty = document.getElementById('adminEmpty');
+  document.getElementById('checkAll').checked = false;
+  if (!rows.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  const st = { pending: '검토 중', approved: '승인', rejected: '반려' };
+
+  const filterCls = document.getElementById('adminFilterClass').value;
+  let html = '';
+  const groupList = filterCls ? [filterCls] : CLASSES;
+  groupList.forEach(c => {
+    const group = rows.filter(r => r['학급'] === c);
+    if (!group.length) return;
+    const subAmt = group.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+    html += `<tr style="background:#eff6ff"><td colspan="11" class="fw-bold py-2 px-3" style="font-size:.85rem">
+      <span class="badge-class ${cls(c)} me-2">${c}</span>
+      <span class="text-muted fw-normal small">${group.length}권 | 소계: ${subAmt.toLocaleString()}원</span>
+    </td></tr>`;
+    group.forEach(r => {
+      html += `<tr>
+        <td><input type="checkbox" class="row-check" data-id="${r['id']}"></td>
+        <td>${r['담임']}</td><td class="fw-bold">${r['도서명']}</td>
+        <td>${r['지은이']}</td><td>${r['출판사']}</td>
+        <td class="text-end">${Number(r['정가']).toLocaleString()}</td>
+        <td class="text-center">${r['수량']}</td>
+        <td class="text-end fw-bold">${(Number(r['정가'])*Number(r['수량'])).toLocaleString()}</td>
+        <td><span class="status-${r['상태']}">${st[r['상태']]||r['상태']}</span></td>
+        <td class="small text-muted">${fmtD(r['신청일'])}</td>
+        <td>
+          <div class="d-flex gap-1">
+            ${r['상태']!=='approved'?`<button class="btn btn-success btn-sm py-0 px-2" onclick="setStatus('${r['id']}','approved')"><i class="bi bi-check2"></i></button>`:''}
+            ${r['상태']!=='rejected'?`<button class="btn btn-warning btn-sm py-0 px-2" onclick="setStatus('${r['id']}','rejected')"><i class="bi bi-x"></i></button>`:''}
+            <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="deleteReq('${r['id']}')"><i class="bi bi-trash"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML = html;
+}
+
+async function setStatus(id, status) {
+  loading(true, '처리 중...');
+  try {
+    await api({ action: 'updateStatus', id, status });
+    const r = appData.requests.find(x => String(x['id']) === String(id));
+    if (r) r['상태'] = status;
+    renderAdminTable(); renderAdminStats(); renderBudgetOverview(); renderMyRequests();
+    toast(status === 'approved' ? '승인 완료' : '반려 완료', status === 'approved' ? 'success' : 'warning');
+  } finally { loading(false); }
+}
+
+async function deleteReq(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  loading(true, '삭제 중...');
+  try {
+    await api({ action: 'deleteRequest', id });
+    appData.requests = appData.requests.filter(x => String(x['id']) !== String(id));
+    renderAdminTable(); renderAdminStats(); renderBudgetOverview(); renderMyRequests();
+    toast('삭제 완료');
+  } finally { loading(false); }
+}
+
+async function clearAllRequests() {
+  if (!confirm('⚠️ 모든 신청 내역을 삭제하시겠습니까?')) return;
+  loading(true, '삭제 중...');
+  try {
+    await api({ action: 'clearRequests' });
+    appData.requests = [];
+    renderAdminTable(); renderAdminStats(); renderBudgetOverview(); renderMyRequests();
+    toast('전체 삭제 완료');
+  } finally { loading(false); }
+}
+
+function toggleAll(cb) { document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked); }
+
+async function bulkAction(status) {
+  const ids = [...document.querySelectorAll('.row-check:checked')].map(c => c.dataset.id);
+  if (!ids.length) { toast('선택된 항목이 없습니다', 'warning'); return; }
+  loading(true, '처리 중...');
+  try {
+    await api({ action: 'bulkStatus', ids: JSON.stringify(ids), status });
+    appData.requests.forEach(r => { if (ids.includes(String(r['id']))) r['상태'] = status; });
+    renderAdminTable(); renderAdminStats(); renderBudgetOverview(); renderMyRequests();
+    toast(`${ids.length}건 처리 완료`, 'success');
+  } finally { loading(false); }
+}
+
+// ===================== ADMIN TABS =====================
+function switchTab(tab, btn) {
+  document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'requests') renderAdminTable();
+  if (tab === 'books') renderBookList();
+  if (tab === 'budget') renderBudgetOverview();
+}
+
+// ===================== BUDGET =====================
+function renderClassBudgetInputs() {
+  const budget = appData.budget;
+  document.getElementById('totalBudgetInput').value = budget.total || '';
+  document.getElementById('classBudgetInputs').innerHTML = CLASSES.map(c => `
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <label class="small fw-bold" style="width:90px;flex-shrink:0">${c}</label>
+      <input type="number" class="form-control form-control-sm" id="budget_${c.replace(/\s/g,'_')}" value="${budget.classes[c]||''}" placeholder="0">
+    </div>`).join('');
+}
+
+async function saveBudget() {
+  const total = parseInt(document.getElementById('totalBudgetInput').value) || 0;
+  const classes = {};
+  CLASSES.forEach(c => {
+    const v = parseInt(document.getElementById(`budget_${c.replace(/\s/g,'_')}`).value) || 0;
+    if (v) classes[c] = v;
+  });
+  loading(true, '예산 저장 중...');
+  try {
+    await api({ action: 'saveBudget', data: JSON.stringify({ total, classes }) });
+    appData.budget = { total, classes };
+    renderBudgetOverview();
+    toast('예산 저장 완료', 'success');
+  } finally { loading(false); }
+}
+
+function renderBudgetOverview() {
+  const budget = appData.budget;
+  const reqs   = appData.requests;
+  const totalUsed = reqs.filter(r => r['상태'] !== '반려').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+  const tb = budget.total || 0;
+  const tp = tb > 0 ? Math.min(100, Math.round(totalUsed / tb * 100)) : 0;
+
+  let html = `<div class="mb-4 p-3 rounded-3" style="background:#f8faff;border:1.5px solid #dbeafe">
+    <div class="d-flex justify-content-between mb-1"><span class="fw-bold small">전체 예산</span><span class="small text-muted">${totalUsed.toLocaleString()}원 / ${tb ? tb.toLocaleString()+'원' : '미설정'}</span></div>
+    <div class="bbar-wrap"><div class="bbar ${tp>=100?'over':tp>=80?'warn':''}" style="width:${tp}%"></div></div>
+    ${tb ? `<div class="small mt-1 text-muted text-end">${tp}% 사용</div>` : ''}
+  </div>`;
+
+  html += CLASSES.map(c => {
+    const cb   = budget.classes[c] || 0;
+    const used = reqs.filter(r => r['학급'] === c && r['상태'] !== '반려').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+    const p    = cb > 0 ? Math.min(100, Math.round(used / cb * 100)) : 0;
+    return `<div class="mb-3">
+      <div class="d-flex justify-content-between mb-1"><span class="small fw-bold">${c}</span><span class="small text-muted">${used.toLocaleString()}원 / ${cb ? cb.toLocaleString()+'원' : '미설정'}</span></div>
+      <div class="bbar-wrap"><div class="bbar ${p>=100?'over':p>=80?'warn':''}" style="width:${cb?p:0}%"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('budgetOverview').innerHTML = html;
+}
+
+// ===================== BOOK LIST =====================
+async function uploadBookFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'array' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+      const books = [];
+      for (let i = 1; i < rows.length; i++) {
+        const [title='', author='', publisher=''] = rows[i];
+        const t = String(title).trim();
+        if (t) books.push({ id: Date.now() + i, title: t, author: String(author).trim(), publisher: String(publisher).trim() });
+      }
+      loading(true, `${books.length}권 업로드 중...`);
+      try {
+        let added = 0;
+        for (let i = 0; i < books.length; i += 50) {
+          const res = await api({ action: 'addBooks', data: JSON.stringify(books.slice(i, i + 50)) });
+          added += res.added || 0;
+        }
+        await loadData();
+        toast(`${added}권 추가 완료`, 'success');
+      } finally { loading(false); }
+    } catch (err) { toast('파일 오류: ' + err.message, 'danger'); }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+}
+
+async function addBookManual() {
+  const title     = document.getElementById('addBookTitle').value.trim();
+  const author    = document.getElementById('addBookAuthor').value.trim();
+  const publisher = document.getElementById('addBookPublisher').value.trim();
+  if (!title) { toast('도서명을 입력해주세요', 'warning'); return; }
+  loading(true, '추가 중...');
+  try {
+    const res = await api({ action: 'addBook', data: JSON.stringify({ id: Date.now(), title, author, publisher }) });
+    if (res.ok) {
+      appData.books.push({ id: Date.now(), '도서명': title, '지은이': author, '출판사': publisher });
+      renderBookList();
+      ['addBookTitle','addBookAuthor','addBookPublisher'].forEach(id => document.getElementById(id).value = '');
+      toast('도서 추가 완료', 'success');
+    } else { toast(res.msg || '추가 실패', 'warning'); }
+  } finally { loading(false); }
+}
+
+async function deleteBook(id) {
+  loading(true, '삭제 중...');
+  try {
+    await api({ action: 'deleteBook', id });
+    appData.books = appData.books.filter(b => String(b['id']) !== String(id));
+    renderBookList();
+  } finally { loading(false); }
+}
+
+async function clearAllBooks() {
+  if (!confirm('기존 도서 목록을 전체 삭제하시겠습니까?')) return;
+  loading(true, '삭제 중...');
+  try {
+    await api({ action: 'clearBooks' });
+    appData.books = []; renderBookList();
+    toast('전체 삭제 완료');
+  } finally { loading(false); }
+}
+
+function renderBookList() {
+  const q = (document.getElementById('searchBook')?.value || '').trim().toLowerCase();
+  let books = appData.books;
+  if (q) books = books.filter(b => String(b['도서명']).toLowerCase().includes(q) || String(b['지은이']||'').toLowerCase().includes(q));
+  document.getElementById('bookCount').textContent = appData.books.length;
+  const tbody = document.getElementById('bookListTbody');
+  const empty = document.getElementById('bookEmpty');
+  if (!books.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = books.map(b => `<tr>
+    <td class="small">${b['도서명']}</td>
+    <td class="small text-muted">${b['지은이']||''}</td>
+    <td class="small text-muted">${b['출판사']||''}</td>
+    <td><button class="btn btn-outline-danger btn-sm py-0 px-1" onclick="deleteBook('${b['id']}')"><i class="bi bi-trash3" style="font-size:.72rem"></i></button></td>
+  </tr>`).join('');
+}
+
+// ===================== EXCEL DOWNLOAD =====================
+function getFilteredRows() {
+  const fc = document.getElementById('adminFilterClass').value;
+  const fs = document.getElementById('adminFilterStatus').value;
+  let rows = appData.requests;
+  if (fc) rows = rows.filter(r => r['학급'] === fc);
+  if (fs) rows = rows.filter(r => r['상태'] === fs);
+  return rows;
+}
+
+function downloadExcel() {
+  const rows = getFilteredRows();
+  if (!rows.length) { toast('다운로드할 데이터가 없습니다', 'warning'); return; }
+
+  const stTxt = { pending:'검토 중', approved:'승인', rejected:'반려' };
+  const header = ['번호','학급','담임교사','도서명','지은이','출판사','정가(원)','수량','금액(원)','상태','신청일'];
+  const data = [header];
+
+  const fc = document.getElementById('adminFilterClass').value;
+  const groupList = fc ? [fc] : CLASSES;
+  let rowNum = 1;
+  const grandTotal = { qty: 0, amt: 0 };
+
+  groupList.forEach(c => {
+    const group = rows.filter(r => r['학급'] === c);
+    if (!group.length) return;
+    // 학급 헤더 행
+    data.push([`[${c}]`, '', '', '', '', '', '', '', '', '', '']);
+    group.forEach(r => {
+      const amt = Number(r['정가']) * Number(r['수량']);
+      data.push([rowNum++, r['학급'], r['담임'], r['도서명'], r['지은이'], r['출판사'],
+        Number(r['정가']), Number(r['수량']), amt, stTxt[r['상태']]||r['상태'], fmtD(r['신청일'])]);
+      if (r['상태'] !== 'rejected') { grandTotal.qty += Number(r['수량']); grandTotal.amt += amt; }
+    });
+    // 학급 소계
+    const sub = group.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+    data.push(['', '', '', '', '', '', '', `${c} 소계`, sub, '', '']);
+    data.push([]); // 빈 행
+  });
+  data.push(['', '', '', '', '', '', '', '총 합계', grandTotal.amt, '', '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  // 학급 헤더 행 스타일 (배경색은 xlsx에서 제한적, 굵게 처리)
+  ws['!cols'] = [5,9,9,25,12,12,12,6,12,9,12].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '구매희망도서신청');
+  XLSX.writeFile(wb, `구매희망도서신청_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('엑셀 다운로드 완료', 'success');
+}
+
+// ===================== PDF PRINT =====================
+function downloadPDF() {
+  const rows = getFilteredRows();
+  if (!rows.length) { toast('출력할 데이터가 없습니다', 'warning'); return; }
+
+  const stTxt = { pending:'검토 중', approved:'승인', rejected:'반려' };
+  const grandTotal = rows.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+  const today = new Date().toLocaleDateString('ko-KR');
+  const fc = document.getElementById('adminFilterClass').value;
+  const groupList = fc ? [fc] : CLASSES;
+
+  let bodyRows = '';
+  let rowNum = 1;
+  groupList.forEach(c => {
+    const group = rows.filter(r => r['학급'] === c);
+    if (!group.length) return;
+    const sub = group.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+    bodyRows += `<tr class="cls-hdr"><td colspan="9">▶ ${c} &nbsp;<span style="font-weight:normal;font-size:9px">${group.length}권 | 소계: ${sub.toLocaleString()}원</span></td></tr>`;
+    group.forEach(r => {
+      bodyRows += `<tr>
+        <td>${rowNum++}</td><td>${r['담임']}</td>
+        <td class="left">${r['도서명']}</td><td>${r['지은이']}</td><td>${r['출판사']}</td>
+        <td>${Number(r['정가']).toLocaleString()}</td><td>${r['수량']}</td>
+        <td>${(Number(r['정가'])*Number(r['수량'])).toLocaleString()}</td>
+        <td>${stTxt[r['상태']]||r['상태']}</td>
+      </tr>`;
+    });
+  });
+
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>구매 희망 도서 신청 목록</title>
+  <style>
+    body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;padding:20px;color:#111}
+    h2{text-align:center;font-size:16px;margin-bottom:4px}
+    .sub{text-align:center;color:#555;font-size:10px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse}
+    th{background:#1e40af;color:#fff;padding:5px 4px;text-align:center;font-size:10px}
+    td{padding:4px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px}
+    td.left{text-align:left}
+    .cls-hdr td{background:#dbeafe;color:#1e40af;font-weight:bold;text-align:left;padding:4px 8px;font-size:10px}
+    .total-row td{font-weight:bold;background:#eff6ff;border-top:2px solid #1e40af}
+    @media print{@page{margin:12mm}}
+  </style></head><body>
+  <h2>구매 희망 도서 신청 목록</h2>
+  <div class="sub">출력일: ${today} | 총 ${rows.length}건 | 합계: ${grandTotal.toLocaleString()}원</div>
+  <table><thead><tr>
+    <th>번호</th><th>담임</th><th>도서명</th><th>지은이</th><th>출판사</th>
+    <th>정가</th><th>수량</th><th>금액</th><th>상태</th>
+  </tr></thead><tbody>
+  ${bodyRows}
+  <tr class="total-row"><td colspan="6"></td><td>총 합계</td><td>${grandTotal.toLocaleString()}원</td><td></td></tr>
+  </tbody></table>
+  <script>window.onload=()=>{window.print()}<\/script></body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(html); w.document.close();
+}
+
+// ===================== INIT =====================
+if (!API_URL) {
+  document.getElementById('setupModal').classList.remove('hidden');
+} else {
+  document.getElementById('setupModal').classList.add('hidden');
+  loadData();
+}
+</script>
+</body>
+</html>
