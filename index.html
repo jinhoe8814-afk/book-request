@@ -895,9 +895,10 @@ async function submitCart() {
       status: 'pending', date: now
     }));
 
-    // 30개씩 청크로 전송
-    const CHUNK = 30;
+    // 3권씩 나눠 전송 (URL 길이 제한 우회)
+    const CHUNK = 3;
     for (let i = 0; i < items.length; i += CHUNK) {
+      loading(true, `신청 중... ${Math.min(i + CHUNK, items.length)} / ${items.length}권`);
       await api({ action: 'addRequests', data: JSON.stringify(items.slice(i, i + CHUNK)) });
     }
 
