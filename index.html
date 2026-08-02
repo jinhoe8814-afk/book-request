@@ -184,13 +184,6 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
       <label class="form-label">Apps Script 웹앱 URL</label>
       <input type="url" class="form-control" id="setupUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
     </div>
-    <div class="mb-3">
-      <label class="form-label">카카오 REST API 키 <span class="text-muted small fw-normal">(도서 자동검색용 · 선택)</span></label>
-      <input type="text" class="form-control" id="setupKakaoKey" placeholder="카카오 REST API 키 입력 (선택사항)">
-      <div class="form-text">
-        <a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a>에서 앱 생성 후 REST API 키를 발급받으세요.
-      </div>
-    </div>
     <button class="btn btn-primary w-100" onclick="saveSetup()"><i class="bi bi-check-lg me-1"></i>저장하고 시작</button>
   </div>
 </div>
@@ -258,7 +251,7 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
         <div class="mb-3">
           <label class="form-label">도서명 <span class="text-danger">*</span></label>
           <div class="d-flex gap-2">
-            <input type="text" class="form-control" id="fTitle" placeholder="도서 제목 입력 후 자동검색 버튼 클릭">
+            <input type="text" class="form-control" id="fTitle" placeholder="도서 제목 입력 후 자동검색 버튼 클릭" oninput="autoCheckDuplicate()">
             <button type="button" class="naver-btn" id="yes24Btn" onclick="autoFillYes24()">
               <i class="bi bi-search me-1"></i>도서 자동검색
             </button>
@@ -282,26 +275,11 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
           </div>
         </div>
 
-        <!-- 수량 + 신청 구분 -->
+        <!-- 수량 -->
         <div class="row g-2 mb-3 align-items-end">
           <div class="col-sm-3">
             <label class="form-label">수량 <span class="text-danger">*</span></label>
             <input type="number" class="form-control" id="fQty" value="1" min="1" max="99">
-          </div>
-          <div class="col-sm-9">
-            <label class="form-label">신청 구분</label>
-            <div class="d-flex gap-3 align-items-center" style="height:38px">
-              <div class="form-check mb-0">
-                <input class="form-check-input" type="radio" name="reqKind" id="kindNormal" value="일반" checked>
-                <label class="form-check-label small fw-bold" for="kindNormal" style="color:#1e40af">일반 신청</label>
-              </div>
-              <div class="form-check mb-0">
-                <input class="form-check-input" type="radio" name="reqKind" id="kindReserve" value="예비">
-                <label class="form-check-label small fw-bold" for="kindReserve" style="color:#92400e">
-                  예비 신청 <span class="text-muted" style="font-weight:400">(예산 12% 이내)</span>
-                </label>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -450,6 +428,23 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
                   <div class="form-text"><a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a> → 앱 만들기 → REST API 키</div>
                 </div>
                 <button class="btn btn-warning btn-sm w-100" onclick="saveKakaoKey()"><i class="bi bi-save me-1"></i>API 키 저장</button>
+
+                <hr class="my-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-shield-lock me-2 text-danger"></i>관리자 비밀번호 변경</h6>
+                <div class="mb-2">
+                  <label class="form-label small">현재 비밀번호</label>
+                  <input type="password" class="form-control form-control-sm" id="adminPwCurrent" placeholder="현재 비밀번호">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label small">새 비밀번호</label>
+                  <input type="password" class="form-control form-control-sm" id="adminPwNew" placeholder="새 비밀번호">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label small">새 비밀번호 확인</label>
+                  <input type="password" class="form-control form-control-sm" id="adminPwNewConfirm" placeholder="새 비밀번호 확인">
+                </div>
+                <button class="btn btn-danger btn-sm w-100" onclick="changeAdminPw()"><i class="bi bi-save me-1"></i>비밀번호 변경</button>
+                <div class="form-text">변경하면 모든 기기의 관리자 로그인에 즉시 적용됩니다.</div>
               </div>
               <div class="col-md-7">
                 <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2 text-primary"></i>예산 사용 현황</h6>
@@ -505,7 +500,6 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
                 <select class="form-select form-select-sm" id="adminFilterStatus" onchange="renderAdminTable()" style="width:110px">
                   <option value="">전체 상태</option>
                   <option value="pending">검토 중</option>
-                  <option value="approved">승인</option>
                   <option value="rejected">반려</option>
                 </select>
               </div>
@@ -527,7 +521,6 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
               <div class="text-center py-4 text-muted" id="adminEmpty" style="display:none"><i class="bi bi-inbox fs-2 d-block mb-2"></i>신청 내역이 없습니다</div>
             </div>
             <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-success" onclick="bulkAction('approved')"><i class="bi bi-check2 me-1"></i>선택 승인</button>
               <button class="btn btn-sm btn-outline-danger" onclick="bulkAction('rejected')"><i class="bi bi-x me-1"></i>선택 반려</button>
             </div>
           </div>
@@ -541,7 +534,7 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <script>
 // ===================== CONFIG =====================
-const ADMIN_PW = '5555';
+let ADMIN_PW = localStorage.getItem('adminPw') || '5555'; // 기본값 5555, 서버에 저장된 값이 있으면 자동 동기화
 const CLASSES = ['1학년','2학년','3학년','4학년','5학년','6학년','학습도움반','돌봄교실'];
 const CLASS_COLORS = ['class-1','class-2','class-3','class-4','class-5','class-6','class-7','class-8'];
 
@@ -594,8 +587,6 @@ function saveSetup() {
   }
   API_URL = url;
   localStorage.setItem('appsScriptUrl', url);
-  const kakaoKey = document.getElementById('setupKakaoKey').value.trim();
-  if (kakaoKey) { KAKAO_KEY = kakaoKey; localStorage.setItem('kakaoApiKey', kakaoKey); }
   document.getElementById('setupModal').classList.add('hidden');
   loadData();
 }
@@ -619,6 +610,33 @@ function toggleKakaoKeyVisibility() {
   else { inp.type = 'password'; icon.className = 'bi bi-eye'; }
 }
 
+async function changeAdminPw() {
+  const cur     = document.getElementById('adminPwCurrent').value;
+  const next    = document.getElementById('adminPwNew').value;
+  const confirm2 = document.getElementById('adminPwNewConfirm').value;
+
+  if (cur !== ADMIN_PW) {
+    toast('현재 비밀번호가 일치하지 않습니다', 'danger'); return;
+  }
+  if (!next || next.length < 4) {
+    toast('새 비밀번호는 4자 이상이어야 합니다', 'warning'); return;
+  }
+  if (next !== confirm2) {
+    toast('새 비밀번호 확인이 일치하지 않습니다', 'danger'); return;
+  }
+
+  ADMIN_PW = next;
+  localStorage.setItem('adminPw', next);
+  // 서버(Apps Script)에도 저장 → 모든 기기의 관리자 로그인에 자동 반영
+  try {
+    await api({ action: 'setAdminPw', pw: next });
+    toast('관리자 비밀번호가 변경되었습니다 (모든 기기 적용)', 'success');
+  } catch {
+    toast('이 기기에는 적용되었으나 서버 저장에 실패했습니다', 'warning');
+  }
+  ['adminPwCurrent','adminPwNew','adminPwNewConfirm'].forEach(id => document.getElementById(id).value = '');
+}
+
 // ===================== DATA LOAD =====================
 async function loadData() {
   loading(true, '데이터 불러오는 중...');
@@ -630,6 +648,7 @@ async function loadData() {
       appData.budget   = d.budget   || { total: 0, classes: {} };
       // 서버에 저장된 카카오 API 키 자동 적용 (관리자가 저장하면 모든 사용자에게 공유)
       if (d.kakaoKey) { KAKAO_KEY = d.kakaoKey; localStorage.setItem('kakaoApiKey', d.kakaoKey); }
+      if (d.adminPw)  { ADMIN_PW  = d.adminPw;  localStorage.setItem('adminPw', d.adminPw); }
       renderMyRequests();
       if (document.getElementById('page-status').classList.contains('active')) renderStatusTable();
       if (document.getElementById('page-admin').classList.contains('active')) {
@@ -745,26 +764,53 @@ function applyYes24Result() {
 function closeYes24Modal() { document.getElementById('yes24Modal').classList.add('hidden'); }
 
 // ===================== DUPLICATE CHECK =====================
-function checkDuplicate() {
-  const title = document.getElementById('fTitle').value.trim();
-  if (!title) { toast('도서명을 입력해주세요', 'warning'); return; }
-  const low = title.toLowerCase().replace(/\s/g, '');
-  const dups = appData.books.filter(b => {
+function findDuplicates(title) {
+  const low = String(title || '').toLowerCase().replace(/\s/g, '');
+  if (!low) return [];
+  return appData.books.filter(b => {
     const bt = String(b['도서명'] || '').toLowerCase().replace(/\s/g, '');
-    if (!bt || !low) return false;
+    if (!bt) return false;
     if (bt === low) return true; // 완전 일치
     // 짧은 쪽이 긴 쪽의 85% 이상 길이일 때만 포함 관계 체크 (단어 하나짜리 오탐 방지)
     const ratio = Math.min(bt.length, low.length) / Math.max(bt.length, low.length);
     return ratio >= 0.85 && (bt.includes(low) || low.includes(bt));
   });
+}
+
+function renderDupResult(dups, { silent } = {}) {
   const div = document.getElementById('dupResult');
+  if (dups === null) { // 입력값 없음 → 결과 숨김
+    div.style.display = 'none';
+    return;
+  }
   div.style.display = 'block';
   if (dups.length) {
     div.innerHTML = `<div class="dup-alert"><div class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-circle-fill me-1"></i>중복 도서 발견!</div>
       <ul class="mb-0">${dups.map(d=>`<li><strong>${d['도서명']}</strong> ${d['지은이']?'/ '+d['지은이']:''} ${d['출판사']?'('+d['출판사']+')':''}</li>`).join('')}</ul></div>`;
-  } else {
+  } else if (!silent) {
     div.innerHTML = `<div class="dup-ok"><i class="bi bi-check-circle-fill text-success me-2"></i>중복 도서가 없습니다. 신청 가능합니다.</div>`;
+  } else {
+    div.style.display = 'none';
   }
+}
+
+// 수동 버튼 (제목 입력 후 바로 확인하고 싶을 때)
+function checkDuplicate() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { toast('도서명을 입력해주세요', 'warning'); return; }
+  renderDupResult(findDuplicates(title));
+}
+
+// 도서명 입력 중 자동 확인 (디바운스)
+let dupCheckTimer = null;
+function autoCheckDuplicate() {
+  clearTimeout(dupCheckTimer);
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { renderDupResult(null); return; }
+  dupCheckTimer = setTimeout(() => {
+    // 자동 확인은 중복이 있을 때만 알려주고, 없으면 조용히 넘어감(추가 버튼 클릭 시 다시 확인)
+    renderDupResult(findDuplicates(title), { silent: true });
+  }, 400);
 }
 
 // ===================== CART =====================
@@ -774,17 +820,22 @@ function addToCart() {
   const publisher = document.getElementById('fPublisher').value.trim();
   const price     = parseInt(document.getElementById('fPrice').value) || 0;
   const qty       = parseInt(document.getElementById('fQty').value) || 1;
-  const kind      = document.querySelector('input[name="reqKind"]:checked')?.value || '일반';
 
   if (!title || !author || !publisher || !price) {
     toast('도서명, 지은이, 출판사, 정가는 필수입니다', 'danger'); return;
   }
 
-  cart.push({ title, author, publisher, price, qty, kind });
+  // 추가하기 전에 중복 확인을 항상 자동으로 실행
+  const dups = findDuplicates(title);
+  renderDupResult(dups);
+  if (dups.length && !confirm(`이미 등록된 도서와 비슷합니다:\n${dups.map(d=>d['도서명']).join(', ')}\n\n그래도 추가하시겠습니까?`)) {
+    return;
+  }
+
+  cart.push({ title, author, publisher, price, qty });
   renderCart();
   // 입력 폼 초기화
   ['fTitle','fAuthor','fPublisher','fPrice'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('kindNormal').checked = true; // 기본값 복원
   document.getElementById('fQty').value = 1;
   document.getElementById('dupResult').style.display = 'none';
   toast(`"${title}" 추가됨 (총 ${cart.length}권)`, 'success');
@@ -830,10 +881,7 @@ function renderCart() {
     </table></div>`;
   }
 
-  const normalItems  = cart.filter(r => r.kind !== '예비');
-  const reserveItems = cart.filter(r => r.kind === '예비');
-  body.innerHTML = cartSection(normalItems, 0, '📘 일반 신청', 'normal')
-                 + cartSection(reserveItems, normalItems.length, '📙 예비 신청', 'reserve');
+  body.innerHTML = cartSection(cart, 0, '📘 신청 목록', 'normal');
   document.getElementById('cartTotalQty').textContent = totalQty;
   document.getElementById('cartTotalAmt').textContent = totalAmt.toLocaleString();
   footer.style.display = '';
@@ -866,22 +914,18 @@ async function submitCart() {
   if (!cls || !teacher) { toast('학급과 담임교사 이름을 입력해주세요', 'danger'); return; }
   if (!cart.length) { toast('신청할 도서가 없습니다', 'warning'); return; }
 
-  // 예산 체크 (일반 / 예비 분리)
+  // 예산 체크 (배정 예산의 115% 이내까지 허용, 일반/예비 구분 없음)
   const budget = appData.budget;
   const classBudget = budget.classes[cls] || 0;
   if (classBudget > 0) {
     const existReqs = appData.requests.filter(r => r['학급'] === cls && r['상태'] !== '반려');
-    const usedNormal  = existReqs.filter(r => r['종류'] !== '예비').reduce((s,r) => s + Number(r['정가'])*Number(r['수량']), 0);
-    const usedReserve = existReqs.filter(r => r['종류'] === '예비').reduce((s,r) => s + Number(r['정가'])*Number(r['수량']), 0);
-    const newNormal   = cart.filter(r=>r.kind!=='예비').reduce((s,r)=>s+r.price*r.qty, 0);
-    const newReserve  = cart.filter(r=>r.kind==='예비').reduce((s,r)=>s+r.price*r.qty, 0);
-    const reserveLimit = Math.floor(classBudget * 0.12);
-    let warn = '';
-    if (usedNormal + newNormal > classBudget)
-      warn += `• 일반 신청이 학급 예산을 초과합니다\n  (사용: ${(usedNormal+newNormal).toLocaleString()}원 / 배정: ${classBudget.toLocaleString()}원)\n`;
-    if (usedReserve + newReserve > reserveLimit)
-      warn += `• 예비 신청이 예비 한도(12%)를 초과합니다\n  (사용: ${(usedReserve+newReserve).toLocaleString()}원 / 한도: ${reserveLimit.toLocaleString()}원)\n`;
-    if (warn && !confirm(`⚠️ 예산 초과 경고\n\n${warn}\n그래도 제출하시겠습니까?`)) return;
+    const used  = existReqs.reduce((s,r) => s + Number(r['정가'])*Number(r['수량']), 0);
+    const added = cart.reduce((s,r)=>s+r.price*r.qty, 0);
+    const limit = Math.floor(classBudget * 1.15);
+    if (used + added > limit) {
+      const warn = `• 신청 금액이 예산 한도(배정 예산의 115%)를 초과합니다\n  (사용: ${(used+added).toLocaleString()}원 / 한도: ${limit.toLocaleString()}원)\n`;
+      if (!confirm(`⚠️ 예산 초과 경고\n\n${warn}\n그래도 제출하시겠습니까?`)) return;
+    }
   }
 
   loading(true, `${cart.length}권 신청 중...`);
@@ -891,7 +935,7 @@ async function submitCart() {
       id: Date.now() + i,
       class: cls, teacher,
       title: r.title, author: r.author, publisher: r.publisher,
-      price: r.price, qty: r.qty, kind: r.kind || '일반',
+      price: r.price, qty: r.qty, kind: '일반',
       status: 'pending', date: now
     }));
 
@@ -906,7 +950,7 @@ async function submitCart() {
     items.forEach(it => appData.requests.push({
       id: it.id, 학급: it.class, 담임: it.teacher,
       도서명: it.title, 지은이: it.author, 출판사: it.publisher,
-      정가: it.price, 수량: it.qty, 종류: it.kind || '일반',
+      정가: it.price, 수량: it.qty, 종류: '일반',
       상태: 'pending', 신청일: it.date
     }));
 
@@ -930,27 +974,21 @@ function renderMyRequests() {
 
   const budget = appData.budget;
   const classBudget = budget.classes[cls] || 0;
-  const reserveLimit = Math.floor(classBudget * 0.12);
+  const limit = Math.floor(classBudget * 1.15);
 
   const rows = appData.requests.filter(r => r['학급'] === cls);
   const activeRows = rows.filter(r => r['상태'] !== '반려');
-  const usedNormal  = activeRows.filter(r => r['종류'] !== '예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
-  const usedReserve = activeRows.filter(r => r['종류'] === '예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
+  const used = activeRows.reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
 
   // ── 예산 바 ──────────────────────────────────────
   let budgetHtml = '';
   if (classBudget > 0) {
-    // 바 전체 너비 = 112% 기준
-    const total112 = classBudget * 1.12;
-    const normalPct  = Math.min(100, usedNormal / total112 * 100);
-    const reservePct = Math.min(100 - normalPct, usedReserve / total112 * 100);
-    const dividerPct = classBudget / total112 * 100; // 100% 경계선 위치
-    const remainNormal  = Math.max(0, classBudget - usedNormal);
-    const remainReserve = Math.max(0, reserveLimit - usedReserve);
-
-    const isOverNormal  = usedNormal  > classBudget;
-    const isOverReserve = usedReserve > reserveLimit;
-    const cardCls = (isOverNormal || isOverReserve) ? 'over' : usedNormal/classBudget > 0.8 ? 'warn' : '';
+    // 바 전체 너비 = 115% 기준
+    const usedPct    = Math.min(100, used / limit * 100);
+    const dividerPct = classBudget / limit * 100; // 100% 경계선 위치
+    const remain     = Math.max(0, limit - used);
+    const isOver      = used > limit;
+    const cardCls = isOver ? 'over' : used/classBudget > 0.8 ? 'warn' : '';
 
     budgetHtml = `<div class="cls-budget-card ${cardCls} mb-3 mx-3 mt-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
@@ -959,36 +997,30 @@ function renderMyRequests() {
       </div>
 
       <!-- 예산 바 -->
-      <div class="cls-budget-bar-outer mb-2" title="배정 예산 기준 112% 구간 표시">
-        <div class="cls-budget-bar-normal" style="width:${normalPct.toFixed(1)}%"></div>
-        <div class="cls-budget-bar-reserve" style="left:${normalPct.toFixed(1)}%;width:${reservePct.toFixed(1)}%"></div>
+      <div class="cls-budget-bar-outer mb-2" title="배정 예산 기준 115% 구간 표시">
+        <div class="cls-budget-bar-normal" style="width:${usedPct.toFixed(1)}%"></div>
         <div class="cls-budget-divider" style="left:${dividerPct.toFixed(1)}%" title="배정 예산 100% 기준선"></div>
       </div>
       <div class="d-flex justify-content-between" style="font-size:.72rem;color:#6b7280;margin-bottom:.1rem">
         <span>0</span>
         <span style="position:absolute;left:${dividerPct.toFixed(1)}%;transform:translateX(-50%);font-size:.68rem;color:#1e40af;font-weight:600">100%</span>
-        <span>112%</span>
+        <span>115%</span>
       </div>
 
       <!-- 수치 -->
       <div class="row g-2 mt-1">
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-4">
           <div class="small text-muted">배정 예산</div>
           <div class="fw-bold" style="color:#1e40af">${classBudget.toLocaleString()}원</div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="small text-muted"><span class="kind-normal me-1">일반</span>사용</div>
-          <div class="fw-bold ${isOverNormal?'text-danger':''}">${usedNormal.toLocaleString()}원</div>
-          <div class="text-muted" style="font-size:.72rem">잔여 ${remainNormal.toLocaleString()}원</div>
+        <div class="col-6 col-md-4">
+          <div class="small text-muted">사용</div>
+          <div class="fw-bold ${isOver?'text-danger':''}">${used.toLocaleString()}원</div>
+          <div class="text-muted" style="font-size:.72rem">잔여 ${remain.toLocaleString()}원</div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="small text-muted"><span class="kind-reserve me-1">예비</span>사용</div>
-          <div class="fw-bold ${isOverReserve?'text-danger':'text-warning'}">${usedReserve.toLocaleString()}원</div>
-          <div class="text-muted" style="font-size:.72rem">한도 ${reserveLimit.toLocaleString()}원 · 잔여 ${remainReserve.toLocaleString()}원</div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="small text-muted">예비 한도 (12%)</div>
-          <div class="fw-bold text-warning">${reserveLimit.toLocaleString()}원</div>
+        <div class="col-6 col-md-4">
+          <div class="small text-muted">한도 (배정 예산의 115%)</div>
+          <div class="fw-bold text-warning">${limit.toLocaleString()}원</div>
         </div>
       </div>
     </div>`;
@@ -1002,9 +1034,8 @@ function renderMyRequests() {
   }
 
   div.innerHTML = budgetHtml + `<div class="table-responsive"><table class="table table-sm table-hover mb-0">
-    <thead><tr><th>구분</th><th>도서명</th><th>지은이</th><th>정가</th><th>수량</th><th>금액</th><th>신청일</th><th></th></tr></thead>
+    <thead><tr><th>도서명</th><th>지은이</th><th>정가</th><th>수량</th><th>금액</th><th>신청일</th><th></th></tr></thead>
     <tbody>${rows.map(r=>`<tr>
-      <td><span class="${r['종류']==='예비'?'kind-reserve':'kind-normal'}">${r['종류']||'일반'}</span></td>
       <td class="fw-bold small">${r['도서명']}</td>
       <td class="small text-muted">${r['지은이']}</td>
       <td class="text-end small">${Number(r['정가']).toLocaleString()}</td>
@@ -1048,13 +1079,9 @@ function renderStatusTable() {
 
   const total = rows.length;
   const amt   = rows.reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
-  const normalAmt  = rows.filter(r=>r['종류']!=='예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
-  const reserveAmt = rows.filter(r=>r['종류']==='예비').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
   document.getElementById('statusSummary').innerHTML = `
-    <div class="col-6 col-md-3"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${total}</div><div class="stat-label text-primary">전체 신청</div></div></div>
-    <div class="col-6 col-md-3"><div class="stat-card" style="background:#dbeafe"><div class="stat-num text-blue-700" style="color:#1d4ed8">${normalAmt.toLocaleString()}</div><div class="stat-label" style="color:#1d4ed8">일반 금액(원)</div></div></div>
-    <div class="col-6 col-md-3"><div class="stat-card" style="background:#fef3c7"><div class="stat-num" style="color:#92400e">${reserveAmt.toLocaleString()}</div><div class="stat-label" style="color:#92400e">예비 금액(원)</div></div></div>
-    <div class="col-6 col-md-3"><div class="stat-card" style="background:#f8faff"><div class="stat-num text-primary" style="font-size:1.3rem">${amt.toLocaleString()}</div><div class="stat-label text-primary">총 금액(원)</div></div></div>`;
+    <div class="col-6 col-md-6"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${total}</div><div class="stat-label text-primary">전체 신청</div></div></div>
+    <div class="col-6 col-md-6"><div class="stat-card" style="background:#f8faff"><div class="stat-num text-primary" style="font-size:1.3rem">${amt.toLocaleString()}</div><div class="stat-label text-primary">총 금액(원)</div></div></div>`;
 
   const tbody = document.getElementById('statusTbody');
   const empty = document.getElementById('statusEmpty');
@@ -1115,10 +1142,9 @@ function renderAdminStats() {
   const r = appData.requests;
   const used = r.filter(x => x['상태'] !== '반려').reduce((s,x) => s + Number(x['정가']) * Number(x['수량']), 0);
   document.getElementById('adminStats').innerHTML = `
-    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${r.length}</div><div class="stat-label text-primary"><i class="bi bi-clipboard me-1"></i>전체 신청</div></div></div>
-    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#fffbeb"><div class="stat-num text-warning">${r.filter(x=>x['상태']==='pending').length}</div><div class="stat-label text-warning"><i class="bi bi-hourglass-split me-1"></i>검토 중</div></div></div>
-    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#f0fdf4"><div class="stat-num text-success">${r.filter(x=>x['상태']==='approved').length}</div><div class="stat-label text-success"><i class="bi bi-check-circle me-1"></i>승인</div></div></div>
-    <div class="col-6 col-lg-3"><div class="stat-card" style="background:#fdf4ff"><div class="stat-num" style="color:#7c3aed;font-size:1.3rem">${used.toLocaleString()}</div><div class="stat-label" style="color:#7c3aed"><i class="bi bi-wallet me-1"></i>사용 예산(원)</div></div></div>`;
+    <div class="col-6 col-lg-4"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${r.length}</div><div class="stat-label text-primary"><i class="bi bi-clipboard me-1"></i>전체 신청</div></div></div>
+    <div class="col-6 col-lg-4"><div class="stat-card" style="background:#fffbeb"><div class="stat-num text-warning">${r.filter(x=>x['상태']==='pending').length}</div><div class="stat-label text-warning"><i class="bi bi-hourglass-split me-1"></i>검토 중</div></div></div>
+    <div class="col-6 col-lg-4"><div class="stat-card" style="background:#fdf4ff"><div class="stat-num" style="color:#7c3aed;font-size:1.3rem">${used.toLocaleString()}</div><div class="stat-label" style="color:#7c3aed"><i class="bi bi-wallet me-1"></i>사용 예산(원)</div></div></div>`;
 }
 
 // ===================== ADMIN TABLE =====================
@@ -1158,7 +1184,6 @@ function renderAdminTable() {
         <td class="small text-muted">${fmtD(r['신청일'])}</td>
         <td>
           <div class="d-flex gap-1">
-            ${r['상태']!=='approved'?`<button class="btn btn-success btn-sm py-0 px-2" onclick="setStatus('${r['id']}','approved')"><i class="bi bi-check2"></i></button>`:''}
             ${r['상태']!=='rejected'?`<button class="btn btn-warning btn-sm py-0 px-2" onclick="setStatus('${r['id']}','rejected')"><i class="bi bi-x"></i></button>`:''}
             <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="deleteReq('${r['id']}')"><i class="bi bi-trash"></i></button>
           </div>
