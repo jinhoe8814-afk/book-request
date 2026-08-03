@@ -81,6 +81,11 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
 .cls-budget-card.warn{border-color:#fcd34d;background:#fffbeb}
 .cls-budget-card.over{border-color:#fca5a5;background:#fef2f2}
 
+/* 중복 도서 상세 카드 */
+.dup-detail-card{background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:.9rem 1rem;max-height:260px;overflow-y:auto}
+.dup-row{padding:.45rem 0;border-bottom:1px dashed #fecaca}
+.dup-row:last-child{border-bottom:none}
+
 /* 예비 배지 */
 .kind-normal{background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:12px;font-size:.73rem;font-weight:700}
 .kind-reserve{background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:12px;font-size:.73rem;font-weight:700}
@@ -1028,9 +1033,16 @@ function renderStatusTable() {
 
   const total = rows.length;
   const amt   = rows.reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+  const used  = rows.filter(r => r['상태'] !== '반려').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+  const dupGroups = computeDupGroups(rows);
+  const dupQty = dupGroups.reduce((s,g) => s + g.totalQty, 0);
+
   document.getElementById('statusSummary').innerHTML = `
-    <div class="col-6 col-md-6"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${total}</div><div class="stat-label text-primary">전체 신청</div></div></div>
-    <div class="col-6 col-md-6"><div class="stat-card" style="background:#f8faff"><div class="stat-num text-primary" style="font-size:1.3rem">${amt.toLocaleString()}</div><div class="stat-label text-primary">총 금액(원)</div></div></div>`;
+    <div class="col-4"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${total}</div><div class="stat-label text-primary">전체 신청권수</div></div></div>
+    <div class="col-4"><div class="stat-card" style="background:#fef2f2"><div class="stat-num text-danger">${dupQty}</div><div class="stat-label text-danger">중복 도서 권수</div></div></div>
+    <div class="col-4"><div class="stat-card" style="background:#f8faff"><div class="stat-num text-primary" style="font-size:1.3rem">${amt.toLocaleString()}</div><div class="stat-label text-primary">총 금액(원)</div></div></div>
+    <div class="col-12">${budgetRatioHtml(used, appData.budget.total || 0)}</div>
+    <div class="col-12">${dupGroupsHtml(dupGroups)}</div>`;
 
   const tbody = document.getElementById('statusTbody');
   const empty = document.getElementById('statusEmpty');
@@ -1086,27 +1098,80 @@ function checkAdminPw() {
 function adminLogout() { adminLoggedIn = false; showPage('request'); toast('로그아웃'); }
 document.getElementById('adminPwInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkAdminPw(); });
 
+// ===================== 공용: 중복 도서 상세 / 예산 사용률 =====================
+// 같은 도서명이 2건 이상 신청된 그룹을 학급별로 묶어서 반환
+function computeDupGroups(rows) {
+  const norm = s => String(s || '').toLowerCase().replace(/\s/g, '');
+  const groups = {};
+  rows.forEach(x => {
+    const key = norm(x['도서명']);
+    if (!key) return;
+    if (!groups[key]) groups[key] = { title: x['도서명'], entries: [], totalQty: 0 };
+    groups[key].entries.push({ cls: x['학급'], qty: Number(x['수량']) || 0 });
+    groups[key].totalQty += Number(x['수량']) || 0;
+  });
+  return Object.values(groups).filter(g => g.entries.length > 1).sort((a,b) => b.totalQty - a.totalQty);
+}
+
+// 중복 도서 그룹을 "몇 학년의 어떤 책" 형태로 시각화하는 카드 HTML
+function dupGroupsHtml(dupGroups) {
+  if (!dupGroups.length) {
+    return `<div class="dup-detail-card mt-2"><div class="small text-muted"><i class="bi bi-check-circle me-1"></i>현재 중복 신청된 도서가 없습니다</div></div>`;
+  }
+  const rows = dupGroups.map(g => {
+    // 같은 학급이 여러 번 신청했을 수도 있으니 학급별로 권수 합산
+    const byClass = {};
+    g.entries.forEach(e => { byClass[e.cls] = (byClass[e.cls] || 0) + e.qty; });
+    const classBadges = Object.entries(byClass)
+      .map(([c, q]) => `<span class="badge-class ${cls(c)} me-1">${c} ${q}권</span>`).join('');
+    return `<div class="dup-row">
+      <div class="fw-bold small">${g.title} <span class="text-danger">(총 ${g.totalQty}권)</span></div>
+      <div class="mt-1">${classBadges}</div>
+    </div>`;
+  }).join('');
+  return `<div class="dup-detail-card mt-2">
+    <div class="fw-bold small mb-2 text-danger"><i class="bi bi-files me-1"></i>중복 신청 도서 (${dupGroups.length}종)</div>
+    ${rows}
+  </div>`;
+}
+
+// 예산 사용률(신청금액/총예산, 초과% 포함) 바 HTML
+function budgetRatioHtml(used, total) {
+  if (!total) {
+    return `<div class="px-1 pt-1 small text-muted"><i class="bi bi-info-circle me-1"></i>관리자에서 전체 예산을 설정하면 사용률이 표시됩니다.</div>`;
+  }
+  const pct = used / total * 100;
+  const overPct = Math.max(0, pct - 100);
+  const barPct = Math.min(100, pct);
+  const isOver = used > total;
+  return `<div class="cls-budget-card ${isOver ? 'over' : pct > 80 ? 'warn' : ''} mt-2">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="fw-bold small"><i class="bi bi-pie-chart me-1 text-primary"></i>신청금액 / 총 예산</span>
+      <span class="fw-bold small ${isOver ? 'text-danger' : ''}">${pct.toFixed(1)}%${isOver ? ` (초과 ${overPct.toFixed(1)}%)` : ''}</span>
+    </div>
+    <div class="cls-budget-bar-outer mb-1">
+      <div class="cls-budget-bar-normal" style="width:${barPct.toFixed(1)}%"></div>
+    </div>
+    <div class="d-flex justify-content-between small text-muted">
+      <span>신청금액 ${used.toLocaleString()}원</span>
+      <span>총 예산 ${total.toLocaleString()}원</span>
+    </div>
+  </div>`;
+}
+
 // ===================== ADMIN STATS =====================
 function renderAdminStats() {
   const r = appData.requests;
   const used = r.filter(x => x['상태'] !== '반려').reduce((s,x) => s + Number(x['정가']) * Number(x['수량']), 0);
-
-  // 신청 목록 내 중복 도서(같은 도서명이 2건 이상 신청됨) 총 권수 계산
-  const norm = s => String(s || '').toLowerCase().replace(/\s/g, '');
-  const titleGroups = {};
-  r.forEach(x => {
-    const key = norm(x['도서명']);
-    if (!key) return;
-    (titleGroups[key] = titleGroups[key] || []).push(x);
-  });
-  const dupQty = Object.values(titleGroups)
-    .filter(g => g.length > 1)
-    .reduce((s, g) => s + g.reduce((s2, x) => s2 + Number(x['수량']), 0), 0);
+  const dupGroups = computeDupGroups(r);
+  const dupQty = dupGroups.reduce((s,g) => s + g.totalQty, 0);
 
   document.getElementById('adminStats').innerHTML = `
     <div class="col-6 col-lg-4"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${r.length}</div><div class="stat-label text-primary"><i class="bi bi-clipboard me-1"></i>전체 신청</div></div></div>
     <div class="col-6 col-lg-4"><div class="stat-card" style="background:#fef2f2"><div class="stat-num text-danger">${dupQty}</div><div class="stat-label text-danger"><i class="bi bi-files me-1"></i>중복 도서 권수</div></div></div>
-    <div class="col-6 col-lg-4"><div class="stat-card" style="background:#fdf4ff"><div class="stat-num" style="color:#7c3aed;font-size:1.3rem">${used.toLocaleString()}</div><div class="stat-label" style="color:#7c3aed"><i class="bi bi-wallet me-1"></i>사용 예산(원)</div></div></div>`;
+    <div class="col-6 col-lg-4"><div class="stat-card" style="background:#fdf4ff"><div class="stat-num" style="color:#7c3aed;font-size:1.3rem">${used.toLocaleString()}</div><div class="stat-label" style="color:#7c3aed"><i class="bi bi-wallet me-1"></i>사용 예산(원)</div></div></div>
+    <div class="col-12">${budgetRatioHtml(used, appData.budget.total || 0)}</div>
+    <div class="col-12">${dupGroupsHtml(dupGroups)}</div>`;
 }
 
 // ===================== ADMIN TABLE =====================
@@ -1373,10 +1438,8 @@ function renderBookList() {
 // ===================== EXCEL DOWNLOAD =====================
 function getFilteredRows() {
   const fc = document.getElementById('adminFilterClass').value;
-  const fs = document.getElementById('adminFilterStatus').value;
   let rows = appData.requests;
   if (fc) rows = rows.filter(r => r['학급'] === fc);
-  if (fs) rows = rows.filter(r => r['상태'] === fs);
   return rows;
 }
 
