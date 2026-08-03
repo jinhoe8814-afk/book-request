@@ -1437,8 +1437,7 @@ function downloadExcel() {
   const rows = getFilteredRows();
   if (!rows.length) { toast('다운로드할 데이터가 없습니다', 'warning'); return; }
 
-  const stTxt = { pending:'검토 중', approved:'승인', rejected:'반려' };
-  const header = ['번호','학급','담임교사','도서명','지은이','출판사','정가(원)','수량','금액(원)','상태','신청일'];
+  const header = ['번호','학급','담임교사','도서명','지은이','출판사','정가(원)','수량','금액(원)'];
   const data = [header];
 
   const fc = document.getElementById('adminFilterClass').value;
@@ -1450,23 +1449,23 @@ function downloadExcel() {
     const group = rows.filter(r => r['학급'] === c);
     if (!group.length) return;
     // 학급 헤더 행
-    data.push([`[${c}]`, '', '', '', '', '', '', '', '', '', '']);
+    data.push([`[${c}]`, '', '', '', '', '', '', '', '']);
     group.forEach(r => {
       const amt = Number(r['정가']) * Number(r['수량']);
       data.push([rowNum++, r['학급'], r['담임'], r['도서명'], r['지은이'], r['출판사'],
-        Number(r['정가']), Number(r['수량']), amt, stTxt[r['상태']]||r['상태'], fmtD(r['신청일'])]);
+        Number(r['정가']), Number(r['수량']), amt]);
       if (r['상태'] !== 'rejected') { grandTotal.qty += Number(r['수량']); grandTotal.amt += amt; }
     });
     // 학급 소계
     const sub = group.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
-    data.push(['', '', '', '', '', '', '', `${c} 소계`, sub, '', '']);
+    data.push(['', '', '', '', '', '', '', `${c} 소계`, sub]);
     data.push([]); // 빈 행
   });
-  data.push(['', '', '', '', '', '', '', '총 합계', grandTotal.amt, '', '']);
+  data.push(['', '', '', '', '', '', '', '총 합계', grandTotal.amt]);
 
   const ws = XLSX.utils.aoa_to_sheet(data);
   // 학급 헤더 행 스타일 (배경색은 xlsx에서 제한적, 굵게 처리)
-  ws['!cols'] = [5,9,9,25,12,12,12,6,12,9,12].map(w => ({ wch: w }));
+  ws['!cols'] = [5,9,9,25,12,12,12,6,12].map(w => ({ wch: w }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '희망도서신청');
   XLSX.writeFile(wb, `희망도서신청_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -1478,7 +1477,6 @@ function downloadPDF() {
   const rows = getFilteredRows();
   if (!rows.length) { toast('출력할 데이터가 없습니다', 'warning'); return; }
 
-  const stTxt = { pending:'검토 중', approved:'승인', rejected:'반려' };
   const grandTotal = rows.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
   const today = new Date().toLocaleDateString('ko-KR');
   const fc = document.getElementById('adminFilterClass').value;
@@ -1490,14 +1488,13 @@ function downloadPDF() {
     const group = rows.filter(r => r['학급'] === c);
     if (!group.length) return;
     const sub = group.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
-    bodyRows += `<tr class="cls-hdr"><td colspan="9">▶ ${c} &nbsp;<span style="font-weight:normal;font-size:9px">${group.length}권 | 소계: ${sub.toLocaleString()}원</span></td></tr>`;
+    bodyRows += `<tr class="cls-hdr"><td colspan="8">▶ ${c} &nbsp;<span style="font-weight:normal;font-size:9px">${group.length}권 | 소계: ${sub.toLocaleString()}원</span></td></tr>`;
     group.forEach(r => {
       bodyRows += `<tr>
         <td>${rowNum++}</td><td>${r['담임']}</td>
         <td class="left">${r['도서명']}</td><td>${r['지은이']}</td><td>${r['출판사']}</td>
         <td>${Number(r['정가']).toLocaleString()}</td><td>${r['수량']}</td>
         <td>${(Number(r['정가'])*Number(r['수량'])).toLocaleString()}</td>
-        <td>${stTxt[r['상태']]||r['상태']}</td>
       </tr>`;
     });
   });
@@ -1519,10 +1516,10 @@ function downloadPDF() {
   <div class="sub">출력일: ${today} | 총 ${rows.length}건 | 합계: ${grandTotal.toLocaleString()}원</div>
   <table><thead><tr>
     <th>번호</th><th>담임</th><th>도서명</th><th>지은이</th><th>출판사</th>
-    <th>정가</th><th>수량</th><th>금액</th><th>상태</th>
+    <th>정가</th><th>수량</th><th>금액</th>
   </tr></thead><tbody>
   ${bodyRows}
-  <tr class="total-row"><td colspan="6"></td><td>총 합계</td><td>${grandTotal.toLocaleString()}원</td><td></td></tr>
+  <tr class="total-row"><td colspan="6"></td><td>총 합계</td><td>${grandTotal.toLocaleString()}원</td></tr>
   </tbody></table>
   <script>window.onload=()=>{window.print()}<\/script></body></html>`;
 
