@@ -461,11 +461,6 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
                   <option>4학년</option><option>5학년</option><option>6학년</option>
                   <option>학습도움반</option><option>돌봄교실</option>
                 </select>
-                <select class="form-select form-select-sm" id="adminFilterStatus" onchange="renderAdminTable()" style="width:110px">
-                  <option value="">전체 상태</option>
-                  <option value="pending">검토 중</option>
-                  <option value="rejected">반려</option>
-                </select>
               </div>
               <div class="d-flex gap-2">
                 <button class="btn btn-success btn-sm" onclick="downloadExcel()"><i class="bi bi-file-earmark-excel me-1"></i>엑셀</button>
@@ -478,7 +473,7 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
                 <thead><tr>
                   <th><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
                   <th>담임</th><th>도서명</th><th>지은이</th><th>출판사</th>
-                  <th>정가</th><th>수량</th><th>금액</th><th>상태</th><th>신청일</th><th>관리</th>
+                  <th>정가</th><th>수량</th><th>금액</th><th>신청일</th><th>관리</th>
                 </tr></thead>
                 <tbody id="adminTbody"></tbody>
               </table>
@@ -1104,17 +1099,14 @@ function renderAdminStats() {
 // ===================== ADMIN TABLE =====================
 function renderAdminTable() {
   const fc = document.getElementById('adminFilterClass').value;
-  const fs = document.getElementById('adminFilterStatus').value;
   let rows = appData.requests;
   if (fc) rows = rows.filter(r => r['학급'] === fc);
-  if (fs) rows = rows.filter(r => r['상태'] === fs);
 
   const tbody = document.getElementById('adminTbody');
   const empty = document.getElementById('adminEmpty');
   document.getElementById('checkAll').checked = false;
   if (!rows.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
   empty.style.display = 'none';
-  const st = { pending: '검토 중', approved: '승인', rejected: '반려' };
 
   let html = '';
   const groupList = fc ? [fc] : CLASSES;
@@ -1122,7 +1114,7 @@ function renderAdminTable() {
     const group = rows.filter(r => r['학급'] === c);
     if (!group.length) return;
     const subAmt = group.filter(r=>r['상태']!=='rejected').reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
-    html += `<tr style="background:#eff6ff"><td colspan="11" class="fw-bold py-2 px-3" style="font-size:.85rem">
+    html += `<tr style="background:#eff6ff"><td colspan="10" class="fw-bold py-2 px-3" style="font-size:.85rem">
       <span class="badge-class ${cls(c)} me-2">${c}</span>
       <span class="text-muted fw-normal small">${group.length}권 | 소계: ${subAmt.toLocaleString()}원</span>
     </td></tr>`;
@@ -1134,7 +1126,6 @@ function renderAdminTable() {
         <td class="text-end">${Number(r['정가']).toLocaleString()}</td>
         <td class="text-center">${r['수량']}</td>
         <td class="text-end fw-bold">${(Number(r['정가'])*Number(r['수량'])).toLocaleString()}</td>
-        <td><span class="status-${r['상태']}">${st[r['상태']]||r['상태']}</span></td>
         <td class="small text-muted">${fmtD(r['신청일'])}</td>
         <td>
           <div class="d-flex gap-1">
