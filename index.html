@@ -409,23 +409,6 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
                   <div class="form-text"><a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a> → 앱 만들기 → REST API 키</div>
                 </div>
                 <button class="btn btn-warning btn-sm w-100" onclick="saveKakaoKey()"><i class="bi bi-save me-1"></i>API 키 저장</button>
-
-                <hr class="my-4">
-                <h6 class="fw-bold mb-3"><i class="bi bi-shield-lock me-2 text-danger"></i>관리자 비밀번호 변경</h6>
-                <div class="mb-2">
-                  <label class="form-label small">현재 비밀번호</label>
-                  <input type="password" class="form-control form-control-sm" id="adminPwCurrent" placeholder="현재 비밀번호">
-                </div>
-                <div class="mb-2">
-                  <label class="form-label small">새 비밀번호</label>
-                  <input type="password" class="form-control form-control-sm" id="adminPwNew" placeholder="새 비밀번호">
-                </div>
-                <div class="mb-2">
-                  <label class="form-label small">새 비밀번호 확인</label>
-                  <input type="password" class="form-control form-control-sm" id="adminPwNewConfirm" placeholder="새 비밀번호 확인">
-                </div>
-                <button class="btn btn-danger btn-sm w-100" onclick="changeAdminPw()"><i class="bi bi-save me-1"></i>비밀번호 변경</button>
-                <div class="form-text">변경하면 모든 기기의 관리자 로그인에 즉시 적용됩니다.</div>
               </div>
               <div class="col-md-7">
                 <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2 text-primary"></i>예산 사용 현황</h6>
@@ -515,7 +498,7 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <script>
 // ===================== CONFIG =====================
-let ADMIN_PW = localStorage.getItem('adminPw') || '5555'; // 기본값 5555, 서버에 저장된 값이 있으면 자동 동기화
+const ADMIN_PW = '5555';
 const CLASSES = ['1학년','2학년','3학년','4학년','5학년','6학년','학습도움반','돌봄교실'];
 const CLASS_COLORS = ['class-1','class-2','class-3','class-4','class-5','class-6','class-7','class-8'];
 
@@ -562,6 +545,15 @@ async function api(params) {
   return json;
 }
 
+// api()와 동일하지만 ok:false를 오류로 던지지 않고 그대로 반환합니다.
+// (예: 도서 검색 결과 없음처럼, ok:false가 정상적인 "결과 없음"을 의미하는 경우에 사용)
+async function apiSoft(params) {
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
+}
+
 async function apiBatch(items, action, chunkSize = 30) {
   // 대량 데이터를 청크로 나눠 전송
   for (let i = 0; i < items.length; i += chunkSize) {
@@ -600,33 +592,6 @@ function toggleKakaoKeyVisibility() {
   else { inp.type = 'password'; icon.className = 'bi bi-eye'; }
 }
 
-async function changeAdminPw() {
-  const cur     = document.getElementById('adminPwCurrent').value;
-  const next    = document.getElementById('adminPwNew').value;
-  const confirm2 = document.getElementById('adminPwNewConfirm').value;
-
-  if (cur !== ADMIN_PW) {
-    toast('현재 비밀번호가 일치하지 않습니다', 'danger'); return;
-  }
-  if (!next || next.length < 4) {
-    toast('새 비밀번호는 4자 이상이어야 합니다', 'warning'); return;
-  }
-  if (next !== confirm2) {
-    toast('새 비밀번호 확인이 일치하지 않습니다', 'danger'); return;
-  }
-
-  ADMIN_PW = next;
-  localStorage.setItem('adminPw', next);
-  // 서버(Apps Script)에도 저장 → 모든 기기의 관리자 로그인에 자동 반영
-  try {
-    await api({ action: 'setAdminPw', pw: next });
-    toast('관리자 비밀번호가 변경되었습니다 (모든 기기 적용)', 'success');
-  } catch {
-    toast('이 기기에는 적용되었으나 서버 저장에 실패했습니다', 'warning');
-  }
-  ['adminPwCurrent','adminPwNew','adminPwNewConfirm'].forEach(id => document.getElementById(id).value = '');
-}
-
 // ===================== DATA LOAD =====================
 async function loadData() {
   loading(true, '데이터 불러오는 중...');
@@ -638,7 +603,6 @@ async function loadData() {
       appData.budget   = d.budget   || { total: 0, classes: {} };
       // 서버에 저장된 카카오 API 키 자동 적용 (관리자가 저장하면 모든 사용자에게 공유)
       if (d.kakaoKey) { KAKAO_KEY = d.kakaoKey; localStorage.setItem('kakaoApiKey', d.kakaoKey); }
-      if (d.adminPw)  { ADMIN_PW  = d.adminPw;  localStorage.setItem('adminPw', d.adminPw); }
       renderMyRequests();
       if (document.getElementById('page-status').classList.contains('active')) renderStatusTable();
       if (document.getElementById('page-admin').classList.contains('active')) {
@@ -703,7 +667,7 @@ async function autoFillYes24() {
 
     // ② 카카오 키 없거나 실패 시 → Apps Script 통해 Google Books 시도
     if (!d) {
-      const res = await api({ action: 'searchBook', q: title });
+      const res = await apiSoft({ action: 'searchBook', q: title });
       if (res.ok) d = res;
     }
 
