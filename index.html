@@ -564,12 +564,21 @@ function loading(show, msg = '처리 중...') {
   document.getElementById('loadingMsg').textContent = msg;
 }
 
+// 어디서든 처리되지 않은 오류(예: try/finally만 있고 catch가 없는 함수)를 화면에 표시
+window.addEventListener('unhandledrejection', (e) => {
+  loading(false);
+  toast('오류: ' + (e.reason && e.reason.message ? e.reason.message : '요청 처리에 실패했습니다'), 'danger', 5000);
+  e.preventDefault();
+});
+
 // ===================== API =====================
 async function api(params) {
   const url = API_URL + '?' + new URLSearchParams(params).toString();
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return resp.json();
+  const json = await resp.json();
+  if (json && json.ok === false) throw new Error(json.error || '서버 처리 중 오류가 발생했습니다');
+  return json;
 }
 
 async function apiBatch(items, action, chunkSize = 30) {
