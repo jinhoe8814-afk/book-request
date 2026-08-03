@@ -82,8 +82,8 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
 .cls-budget-card.over{border-color:#fca5a5;background:#fef2f2}
 
 /* 중복 도서 상세 카드 */
-.dup-detail-card{background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:.9rem 1rem;max-height:260px;overflow-y:auto}
-.dup-row{padding:.45rem 0;border-bottom:1px dashed #fecaca}
+.dup-detail-card{background:#ecfeff;border:1.5px solid #a5f3fc;border-radius:10px;padding:.9rem 1rem;max-height:260px;overflow-y:auto}
+.dup-row{padding:.45rem 0;border-bottom:1px dashed #a5f3fc}
 .dup-row:last-child{border-bottom:none}
 
 /* 예비 배지 */
@@ -485,7 +485,7 @@ body{background:var(--bg);font-family:'Malgun Gothic','맑은 고딕',sans-serif
               <div class="text-center py-4 text-muted" id="adminEmpty" style="display:none"><i class="bi bi-inbox fs-2 d-block mb-2"></i>신청 내역이 없습니다</div>
             </div>
             <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-danger" onclick="bulkAction('rejected')"><i class="bi bi-x me-1"></i>선택 반려</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="bulkDelete()"><i class="bi bi-trash me-1"></i>선택 삭제</button>
             </div>
           </div>
 
@@ -872,7 +872,7 @@ async function submitCart() {
   const budget = appData.budget;
   const classBudget = budget.classes[cls] || 0;
   if (classBudget > 0) {
-    const existReqs = appData.requests.filter(r => r['학급'] === cls && r['상태'] !== '반려');
+    const existReqs = appData.requests.filter(r => r['학급'] === cls && r['상태'] !== 'rejected');
     const used  = existReqs.reduce((s,r) => s + Number(r['정가'])*Number(r['수량']), 0);
     const added = cart.reduce((s,r)=>s+r.price*r.qty, 0);
     const limit = Math.floor(classBudget * 1.15);
@@ -931,7 +931,7 @@ function renderMyRequests() {
   const limit = Math.floor(classBudget * 1.15);
 
   const rows = appData.requests.filter(r => r['학급'] === cls);
-  const activeRows = rows.filter(r => r['상태'] !== '반려');
+  const activeRows = rows.filter(r => r['상태'] !== 'rejected');
   const used = activeRows.reduce((s,r)=>s+Number(r['정가'])*Number(r['수량']),0);
 
   // ── 예산 바 ──────────────────────────────────────
@@ -970,7 +970,6 @@ function renderMyRequests() {
         <div class="col-6 col-md-4">
           <div class="small text-muted">사용</div>
           <div class="fw-bold ${isOver?'text-danger':''}">${used.toLocaleString()}원</div>
-          <div class="text-muted" style="font-size:.72rem">잔여 ${remain.toLocaleString()}원</div>
         </div>
         <div class="col-6 col-md-4">
           <div class="small text-muted">한도 (배정 예산의 115%)</div>
@@ -1033,13 +1032,13 @@ function renderStatusTable() {
 
   const total = rows.length;
   const amt   = rows.reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
-  const used  = rows.filter(r => r['상태'] !== '반려').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+  const used  = rows.filter(r => r['상태'] !== 'rejected').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
   const dupGroups = computeDupGroups(rows);
   const dupQty = dupGroups.reduce((s,g) => s + g.totalQty, 0);
 
   document.getElementById('statusSummary').innerHTML = `
     <div class="col-4"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${total}</div><div class="stat-label text-primary">전체 신청권수</div></div></div>
-    <div class="col-4"><div class="stat-card" style="background:#fef2f2"><div class="stat-num text-danger">${dupQty}</div><div class="stat-label text-danger">중복 도서 권수</div></div></div>
+    <div class="col-4"><div class="stat-card" style="background:#ecfeff"><div class="stat-num" style="color:#0e7490">${dupQty}</div><div class="stat-label" style="color:#0e7490">중복 도서 권수</div></div></div>
     <div class="col-4"><div class="stat-card" style="background:#f8faff"><div class="stat-num text-primary" style="font-size:1.3rem">${amt.toLocaleString()}</div><div class="stat-label text-primary">총 금액(원)</div></div></div>
     <div class="col-12">${budgetRatioHtml(used, appData.budget.total || 0)}</div>
     <div class="col-12">${dupGroupsHtml(dupGroups)}</div>`;
@@ -1125,12 +1124,12 @@ function dupGroupsHtml(dupGroups) {
     const classBadges = Object.entries(byClass)
       .map(([c, q]) => `<span class="badge-class ${cls(c)} me-1">${c} ${q}권</span>`).join('');
     return `<div class="dup-row">
-      <div class="fw-bold small">${g.title} <span class="text-danger">(총 ${g.totalQty}권)</span></div>
+      <div class="fw-bold small">${g.title} <span style="color:#0e7490">(총 ${g.totalQty}권)</span></div>
       <div class="mt-1">${classBadges}</div>
     </div>`;
   }).join('');
   return `<div class="dup-detail-card mt-2">
-    <div class="fw-bold small mb-2 text-danger"><i class="bi bi-files me-1"></i>중복 신청 도서 (${dupGroups.length}종)</div>
+    <div class="fw-bold small mb-2" style="color:#0e7490"><i class="bi bi-files me-1"></i>중복 신청 도서 (${dupGroups.length}종)</div>
     ${rows}
   </div>`;
 }
@@ -1162,13 +1161,13 @@ function budgetRatioHtml(used, total) {
 // ===================== ADMIN STATS =====================
 function renderAdminStats() {
   const r = appData.requests;
-  const used = r.filter(x => x['상태'] !== '반려').reduce((s,x) => s + Number(x['정가']) * Number(x['수량']), 0);
+  const used = r.filter(x => x['상태'] !== 'rejected').reduce((s,x) => s + Number(x['정가']) * Number(x['수량']), 0);
   const dupGroups = computeDupGroups(r);
   const dupQty = dupGroups.reduce((s,g) => s + g.totalQty, 0);
 
   document.getElementById('adminStats').innerHTML = `
     <div class="col-6 col-lg-4"><div class="stat-card" style="background:#eff6ff"><div class="stat-num text-primary">${r.length}</div><div class="stat-label text-primary"><i class="bi bi-clipboard me-1"></i>전체 신청</div></div></div>
-    <div class="col-6 col-lg-4"><div class="stat-card" style="background:#fef2f2"><div class="stat-num text-danger">${dupQty}</div><div class="stat-label text-danger"><i class="bi bi-files me-1"></i>중복 도서 권수</div></div></div>
+    <div class="col-6 col-lg-4"><div class="stat-card" style="background:#ecfeff"><div class="stat-num" style="color:#0e7490">${dupQty}</div><div class="stat-label" style="color:#0e7490"><i class="bi bi-files me-1"></i>중복 도서 권수</div></div></div>
     <div class="col-6 col-lg-4"><div class="stat-card" style="background:#fdf4ff"><div class="stat-num" style="color:#7c3aed;font-size:1.3rem">${used.toLocaleString()}</div><div class="stat-label" style="color:#7c3aed"><i class="bi bi-wallet me-1"></i>사용 예산(원)</div></div></div>
     <div class="col-12">${budgetRatioHtml(used, appData.budget.total || 0)}</div>
     <div class="col-12">${dupGroupsHtml(dupGroups)}</div>`;
@@ -1207,7 +1206,6 @@ function renderAdminTable() {
         <td class="small text-muted">${fmtD(r['신청일'])}</td>
         <td>
           <div class="d-flex gap-1">
-            ${r['상태']!=='rejected'?`<button class="btn btn-warning btn-sm py-0 px-2" onclick="setStatus('${r['id']}','rejected')"><i class="bi bi-x"></i></button>`:''}
             <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="deleteReq('${r['id']}')"><i class="bi bi-trash"></i></button>
           </div>
         </td>
@@ -1215,17 +1213,6 @@ function renderAdminTable() {
     });
   });
   tbody.innerHTML = html;
-}
-
-async function setStatus(id, status) {
-  loading(true, '처리 중...');
-  try {
-    await api({ action: 'updateStatus', id, status });
-    const r = appData.requests.find(x => String(x['id']) === String(id));
-    if (r) r['상태'] = status;
-    renderAdminTable(); renderAdminStats(); renderBudgetOverview(); renderMyRequests();
-    toast(status === 'approved' ? '승인 완료' : '반려 완료', status === 'approved' ? 'success' : 'warning');
-  } finally { loading(false); }
 }
 
 async function deleteReq(id) {
@@ -1252,15 +1239,18 @@ async function clearAllRequests() {
 
 function toggleAll(cb) { document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked); }
 
-async function bulkAction(status) {
+async function bulkDelete() {
   const ids = [...document.querySelectorAll('.row-check:checked')].map(c => c.dataset.id);
   if (!ids.length) { toast('선택된 항목이 없습니다', 'warning'); return; }
-  loading(true, '처리 중...');
+  if (!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return;
+  loading(true, '삭제 중...');
   try {
-    await api({ action: 'bulkStatus', ids: JSON.stringify(ids), status });
-    appData.requests.forEach(r => { if (ids.includes(String(r['id']))) r['상태'] = status; });
+    for (const id of ids) {
+      await api({ action: 'deleteRequest', id });
+    }
+    appData.requests = appData.requests.filter(r => !ids.includes(String(r['id'])));
     renderAdminTable(); renderAdminStats(); renderBudgetOverview(); renderMyRequests();
-    toast(`${ids.length}건 처리 완료`, 'success');
+    toast(`${ids.length}건 삭제 완료`, 'success');
   } finally { loading(false); }
 }
 
@@ -1305,7 +1295,7 @@ async function saveBudget() {
 function renderBudgetOverview() {
   const budget = appData.budget;
   const reqs   = appData.requests;
-  const totalUsed = reqs.filter(r => r['상태'] !== '반려').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+  const totalUsed = reqs.filter(r => r['상태'] !== 'rejected').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
   const tb = budget.total || 0;
   const tp = tb > 0 ? Math.min(100, Math.round(totalUsed / tb * 100)) : 0;
 
@@ -1317,7 +1307,7 @@ function renderBudgetOverview() {
 
   html += CLASSES.map(c => {
     const cb   = budget.classes[c] || 0;
-    const used = reqs.filter(r => r['학급'] === c && r['상태'] !== '반려').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
+    const used = reqs.filter(r => r['학급'] === c && r['상태'] !== 'rejected').reduce((s,r) => s + Number(r['정가']) * Number(r['수량']), 0);
     const p    = cb > 0 ? Math.min(100, Math.round(used / cb * 100)) : 0;
     return `<div class="mb-3">
       <div class="d-flex justify-content-between mb-1"><span class="small fw-bold">${c}</span><span class="small text-muted">${used.toLocaleString()}원 / ${cb ? cb.toLocaleString()+'원' : '미설정'}</span></div>
